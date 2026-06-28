@@ -2,14 +2,15 @@ import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
 
-import { serverEnv } from "@/lib/env";
+import { serverEnv, publicEnv } from "@/lib/env";
 
 /** Server-side Supabase project metadata (Postgres is accessed via Prisma). */
 export function supabaseConfig() {
   const env = serverEnv();
   return {
-    url: env.SUPABASE_URL,
-    anonKey: env.SUPABASE_ANON_KEY,
+    url: env.SUPABASE_URL || publicEnv.NEXT_PUBLIC_SUPABASE_URL,
+    anonKey:
+      env.SUPABASE_ANON_KEY || publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
   };
 }

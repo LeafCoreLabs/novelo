@@ -6,7 +6,18 @@ import path from "node:path";
 
 import { createClient } from "@supabase/supabase-js";
 
-import { serverEnv } from "@/lib/env";
+import { serverEnv, publicEnv } from "@/lib/env";
+
+function supabaseStorageConfig() {
+  const env = serverEnv();
+  const url = env.SUPABASE_URL || publicEnv.NEXT_PUBLIC_SUPABASE_URL;
+  const apiKey =
+    env.SUPABASE_SERVICE_ROLE_KEY ||
+    env.SUPABASE_ANON_KEY ||
+    publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  return { url, apiKey, bucket: env.S3_BUCKET || "novelo-media" };
+}
 
 export const UPLOAD_MIME_TYPES = [
   "image/png",
@@ -53,22 +64,19 @@ async function uploadLocal(file: File): Promise<UploadedFile> {
 }
 
 async function uploadSupabase(file: File): Promise<UploadedFile> {
-  const env = serverEnv();
-  if (!env.SUPABASE_URL) {
+  const { url, apiKey, bucket } = supabaseStorageConfig();
+  if (!url) {
     throw new Error("Supabase storage requires SUPABASE_URL.");
   }
-
-  const bucket = env.S3_BUCKET || "novelo-media";
-  const ext = file.name.split(".").pop()?.toLowerCase() || extensionFromMime(file.type);
-  const objectPath = `uploads/${randomUUID()}.${ext}`;
-  const bytes = Buffer.from(await file.arrayBuffer());
-
-  const apiKey = env.SUPABASE_SERVICE_ROLE_KEY ?? env.SUPABASE_ANON_KEY;
   if (!apiKey) {
     throw new Error("Supabase storage requires SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY.");
   }
 
-  const supabase = createClient(env.SUPABASE_URL, apiKey, {
+  const ext = file.name.split(".").pop()?.toLowerCase() || extensionFromMime(file.type);
+  const objectPath = `uploads/${randomUUID()}.${ext}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+
+  const supabase = createClient(url, apiKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 

@@ -39,12 +39,16 @@ const serverSchema = z.object({
   EMAIL_FROM: z.string().default("Novelo <hello@novelo.local>"),
 
   // Supabase (production)
-  SUPABASE_URL: z.string().url().optional(),
-  SUPABASE_ANON_KEY: z.string().optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
-  SUPABASE_PROJECT_REF: z.string().optional(),
-  SUPABASE_DB_PASSWORD: z.string().optional(),
+  SUPABASE_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  SUPABASE_ANON_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  SUPABASE_SERVICE_ROLE_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  SUPABASE_PROJECT_REF: z.preprocess(emptyToUndefined, z.string().optional()),
+  SUPABASE_DB_PASSWORD: z.preprocess(emptyToUndefined, z.string().optional()),
 });
+
+function emptyToUndefined(value: unknown) {
+  return value === "" || value === null ? undefined : value;
+}
 
 const publicSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
