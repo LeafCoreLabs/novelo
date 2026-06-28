@@ -14,9 +14,10 @@ if (!password) {
 
 const ref = process.env.SUPABASE_PROJECT_REF ?? "bjvrtepxxkfkymbbuggg";
 const encoded = encodeURIComponent(password);
-const host = "aws-0-ap-south-1.pooler.supabase.com";
-const databaseUrl = `postgresql://postgres.${ref}:${encoded}@${host}:6543/postgres?pgbouncer=true&connection_limit=1`;
-const directUrl = `postgresql://postgres.${ref}:${encoded}@${host}:5432/postgres`;
+const poolHost = "aws-1-ap-south-1.pooler.supabase.com";
+const directHost = `db.${ref}.supabase.co`;
+const databaseUrl = `postgresql://novelo_app.${ref}:${encoded}@${poolHost}:6543/postgres?pgbouncer=true&connection_limit=1`;
+const directUrl = `postgresql://novelo_app:${encoded}@${directHost}:5432/postgres?sslmode=require`;
 
 let env = readFileSync(envPath, "utf8");
 env = env.replace(/^SUPABASE_DB_PASSWORD=.*$/m, `SUPABASE_DB_PASSWORD=${password}`);
