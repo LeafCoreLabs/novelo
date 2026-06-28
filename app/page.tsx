@@ -9,19 +9,21 @@ import { Stats } from "@/components/landing/stats";
 import { StorySection } from "@/components/landing/story-section";
 import { Testimonials } from "@/components/landing/testimonials";
 import { SiteNav } from "@/components/site/site-nav";
+import { getSession } from "@/lib/auth";
 import { getLandingContent } from "@/services/landing.service";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const content = await getLandingContent();
+  const [content, session] = await Promise.all([getLandingContent(), getSession()]);
+  const user = session ? { name: session.name, role: session.role } : null;
 
   return (
     <main className="relative">
-      <SiteNav />
+      <SiteNav user={user} />
 
       <HomeInteractiveShell>
-        <Hero hero={content.hero} />
+        <Hero hero={content.hero} user={user} />
 
         <Stats stats={content.stats} />
         <StorySection
@@ -51,7 +53,7 @@ export default async function HomePage() {
 
       <Newsletter newsletter={content.newsletter} />
 
-      <Footer brand={content.brand.name} tagline={content.brand.tagline} />
+      <Footer brand={content.brand.name} tagline={content.brand.tagline} user={user} />
     </main>
   );
 }

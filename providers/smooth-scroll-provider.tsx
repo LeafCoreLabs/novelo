@@ -2,17 +2,18 @@
 
 import Lenis from "lenis";
 import { usePathname } from "next/navigation";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+
+import { clearScrollLocks } from "@/components/site/route-scroll-reset";
 
 const LenisContext = createContext<Lenis | null>(null);
-
-const DISABLE_LENIS_PREFIXES = ["/signup", "/login", "/admin"];
-
-function shouldDisableLenis(pathname: string) {
-  return DISABLE_LENIS_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
 
 export function useLenis() {
   return useContext(LenisContext);
@@ -31,39 +32,71 @@ export function scrollToHash(hash: string, lenis: Lenis | null) {
   }
 }
 
-/** Lenis smooth-scrolling, disabled automatically for reduced-motion users. */
+function isHomepage(pathname: string) {
+  return pathname === "/";
+}
+
+/** Lenis smooth-scrolling on the marketing homepage only; native scroll elsewhere. */
 export function SmoothScrollProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const lenisRef = useRef<Lenis | null>(null);
+  const rafRef = useRef(0);
   const [lenis, setLenis] = useState<Lenis | null>(null);
 
   useEffect(() => {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced || shouldDisableLenis(pathname)) {
+    const enableLenis = isHomepage(pathname) && !prefersReduced;
+    const instance = lenisRef.current;
+
+    if (!enableLenis) {
+      instance?.stop();
       setLenis(null);
+      clearScrollLocks();
       return;
     }
 
-    const instance = new Lenis({
-      lerp: 0.1,
-      smoothWheel: true,
-      wheelMultiplier: 1,
-      touchMultiplier: 1.5,
-    });
-    setLenis(instance);
+    let active = instance;
+    if (!active) {
+      active = new Lenis({
+        lerp: 0.1,
+        smoothWheel: true,
+        wheelMultiplier: 1,
+        touchMultiplier: 1.5,
+        autoRaf: false,
+      });
+      lenisRef.current = active;
 
-    let rafId = 0;
-    function raf(time: number) {
-      instance.raf(time);
-      rafId = requestAnimationFrame(raf);
+      const raf = (time: number) => {
+        lenisRef.current?.raf(time);
+        rafRef.current = requestAnimationFrame(raf);
+      };
+      rafRef.current = requestAnimationFrame(raf);
+    } else {
+      active.start();
+      active.resize();
     }
-    rafId = requestAnimationFrame(raf);
 
-    return () => {
-      cancelAnimationFrame(rafId);
-      instance.destroy();
-      setLenis(null);
+    setLenis(active);
+
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted || !lenisRef.current || !isHomepage(pathname)) return;
+      clearScrollLocks();
+      lenisRef.current.start();
+      lenisRef.current.resize();
     };
+
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
   }, [pathname]);
+
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      lenisRef.current?.destroy();
+      lenisRef.current = null;
+      clearScrollLocks();
+    };
+  }, []);
 
   return <LenisContext.Provider value={lenis}>{children}</LenisContext.Provider>;
 }

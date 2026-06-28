@@ -5,16 +5,24 @@ import { BookMarked } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { clearScrollLocks } from "@/components/site/route-scroll-reset";
+
 const BRAND_TEXT =
   "Read between the worlds. Serialized fiction across fantasy, sci-fi, and everything in between — new chapters every week, free to start, and you'll never lose your place.";
 
-// Short, fixed intro. The page is server-rendered, so we don't wait on the
-// window `load` event (which can fire very late on mobile/slow connections and
-// makes the loader feel stuck). We dismiss on a guaranteed timer instead.
 const INTRO_DURATION = 600;
+const INTRO_SEEN_KEY = "novelo_intro_seen";
 
 /** Routes where the intro loader should not block interaction. */
-const SKIP_LOADER_PREFIXES = ["/signup", "/login", "/admin", "/story", "/terms", "/privacy"];
+const SKIP_LOADER_PREFIXES = [
+  "/signup",
+  "/login",
+  "/admin",
+  "/story",
+  "/stories",
+  "/terms",
+  "/privacy",
+];
 
 function shouldSkipLoader(pathname: string) {
   return SKIP_LOADER_PREFIXES.some(
@@ -25,33 +33,58 @@ function shouldSkipLoader(pathname: string) {
 /**
  * Branded intro / loading screen.
  *
- * Renders on first paint (SSR-included, so there's no flash of unstyled page),
- * then animates away after a short fixed duration to reveal the site.
+ * Shows once per browser tab session on the homepage, then stays dismissed —
+ * including when the user navigates away and uses the browser back button.
  */
 export function LoadingScreen() {
   const pathname = usePathname();
   const skip = shouldSkipLoader(pathname);
-  const [visible, setVisible] = useState(!skip);
+  const [visible, setVisible] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (skip) {
       setVisible(false);
+      setReady(true);
       return;
     }
 
-    const timer = window.setTimeout(() => setVisible(false), INTRO_DURATION);
+    const seen = sessionStorage.getItem(INTRO_SEEN_KEY) === "1";
+    if (seen) {
+      setVisible(false);
+      setReady(true);
+      return;
+    }
+
+    setVisible(true);
+    setReady(true);
+    const timer = window.setTimeout(() => {
+      sessionStorage.setItem(INTRO_SEEN_KEY, "1");
+      setVisible(false);
+    }, INTRO_DURATION);
+
     return () => window.clearTimeout(timer);
   }, [skip]);
 
-  // Lock scroll while the loader is up.
   useEffect(() => {
+    if (!ready || skip) return;
     document.body.style.overflow = visible ? "hidden" : "";
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.removeProperty("overflow");
     };
-  }, [visible]);
+  }, [visible, ready, skip]);
 
-  if (skip) return null;
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      setVisible(false);
+      clearScrollLocks();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
+  if (skip || !visible) return null;
 
   return (
     <AnimatePresence>
@@ -97,7 +130,6 @@ export function LoadingScreen() {
               {BRAND_TEXT}
             </motion.p>
 
-            {/* Determinate progress bar. */}
             <div className="mt-9 h-[3px] w-56 overflow-hidden rounded-full bg-white/10">
               <motion.div
                 initial={{ width: "0%" }}

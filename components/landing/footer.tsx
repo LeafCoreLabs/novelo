@@ -8,7 +8,9 @@ import { publicEnv } from "@/lib/env";
 import { scrollToHash, useLenis } from "@/providers/smooth-scroll-provider";
 import { cn } from "@/lib/utils";
 
-const columns = [
+import type { NavUser } from "@/components/landing/navbar";
+
+const baseColumns = [
   {
     title: "Read",
     links: [
@@ -29,14 +31,6 @@ const columns = [
     ],
   },
   {
-    title: "Account",
-    links: [
-      { label: "Sign in", href: "/login" },
-      { label: "Create account", href: "/signup" },
-      { label: "Subscribe", href: "/#newsletter" },
-    ],
-  },
-  {
     title: "Legal",
     links: [
       { label: "Privacy", href: "/privacy" },
@@ -46,7 +40,33 @@ const columns = [
   },
 ];
 
-export function Footer({ brand, tagline }: { brand: string; tagline: string }) {
+function buildColumns(user: NavUser) {
+  const accountLinks = user
+    ? [{ label: "Subscribe", href: "/#newsletter" }]
+    : [
+        { label: "Sign in", href: "/login" },
+        { label: "Create account", href: "/signup" },
+        { label: "Subscribe", href: "/#newsletter" },
+      ];
+
+  return [
+    baseColumns[0]!,
+    baseColumns[1]!,
+    { title: "Account", links: accountLinks },
+    baseColumns[2]!,
+  ];
+}
+
+export function Footer({
+  brand,
+  tagline,
+  user = null,
+}: {
+  brand: string;
+  tagline: string;
+  user?: NavUser;
+}) {
+  const columns = buildColumns(user);
   const lenis = useLenis();
   const [showTop, setShowTop] = useState(false);
 

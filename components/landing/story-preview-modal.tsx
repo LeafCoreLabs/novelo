@@ -4,8 +4,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Lock, Star, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 
+import { clearScrollLocks } from "@/components/site/route-scroll-reset";
 import { Button } from "@/components/ui/button";
 import { formatCompact } from "@/lib/utils";
 import type { Story } from "@/types/content";
@@ -22,6 +24,15 @@ export function StoryPreviewModal({
   story: Story | null;
   onClose: () => void;
 }) {
+  const pathname = usePathname();
+  const prevPathname = useRef(pathname);
+
+  useEffect(() => {
+    if (prevPathname.current === pathname) return;
+    prevPathname.current = pathname;
+    onClose();
+  }, [pathname, onClose]);
+
   useEffect(() => {
     if (!story) return;
     const onKey = (e: KeyboardEvent) => {
@@ -31,7 +42,7 @@ export function StoryPreviewModal({
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      clearScrollLocks();
     };
   }, [story, onClose]);
 

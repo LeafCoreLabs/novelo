@@ -15,6 +15,24 @@ import type { NavItem } from "@/types/content";
 
 export type NavUser = { name: string; role: string } | null;
 
+function UserBadge({ name, className }: { name: string; className?: string }) {
+  const initial = name.trim().charAt(0).toUpperCase() || "?";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex min-w-0 items-center gap-2 rounded-full border border-[var(--color-border)] bg-white/5 px-3 py-1.5",
+        className,
+      )}
+    >
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/20 text-xs font-semibold text-[var(--color-primary)]">
+        {initial}
+      </span>
+      <span className="truncate text-sm text-[var(--color-foreground)]">{name}</span>
+    </span>
+  );
+}
+
 function NavAnchor({
   item,
   active,
@@ -57,7 +75,7 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.removeProperty("overflow");
     };
   }, [open]);
 
@@ -115,11 +133,14 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
               </Link>
             )}
             {user ? (
-              <form action={logoutAction}>
-                <Button variant="outline" size="sm" type="submit" title={`Signed in as ${user.name}`}>
-                  <LogOut className="h-4 w-4" /> Sign out
-                </Button>
-              </form>
+              <>
+                <UserBadge name={user.name} className="max-w-[11rem]" />
+                <form action={logoutAction}>
+                  <Button variant="outline" size="sm" type="submit">
+                    <LogOut className="h-4 w-4" /> Sign out
+                  </Button>
+                </form>
+              </>
             ) : (
               <>
                 <Link href="/login">
@@ -206,7 +227,8 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
                 </li>
               )}
               {user && (
-                <li className="pt-2">
+                <li className="space-y-3 pt-2">
+                  <UserBadge name={user.name} className="w-full" />
                   <form action={logoutAction}>
                     <Button variant="outline" size="sm" type="submit" className="w-full">
                       <LogOut className="h-4 w-4" /> Sign out

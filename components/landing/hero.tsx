@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import type { NavUser } from "@/components/landing/navbar";
 import { useHomeInteractive } from "@/components/landing/home-interactive-provider";
 import { Magnetic } from "@/components/motion/magnetic";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,7 @@ function buildHeroCards(
   return cards;
 }
 
-export function Hero({ hero }: { hero: LandingContent["hero"] }) {
+export function Hero({ hero, user = null }: { hero: LandingContent["hero"]; user?: NavUser }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const { scrollY } = useScroll();
   const bookParallaxY = useTransform(scrollY, [0, 600], [0, 80]);
@@ -130,12 +131,14 @@ export function Hero({ hero }: { hero: LandingContent["hero"] }) {
                 </Button>
               </Link>
             </Magnetic>
-            <Link href={hero.secondaryCta.href}>
-              <Button variant="glass" size="lg">
-                <UserPlus className="h-4 w-4" />
-                {hero.secondaryCta.label}
-              </Button>
-            </Link>
+            {!user ? (
+              <Link href={hero.secondaryCta.href}>
+                <Button variant="glass" size="lg">
+                  <UserPlus className="h-4 w-4" />
+                  {hero.secondaryCta.label}
+                </Button>
+              </Link>
+            ) : null}
           </motion.div>
         </div>
 

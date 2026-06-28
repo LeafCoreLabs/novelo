@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { CursorGlow } from "@/components/site/cursor-glow";
 import { IconPatternBackground } from "@/components/site/icon-pattern-background";
 import { LoadingScreen } from "@/components/site/loading-screen";
+import { RouteScrollReset } from "@/components/site/route-scroll-reset";
 import { ScrollProgress } from "@/components/site/scroll-progress";
 import { publicEnv } from "@/lib/env";
 import { QueryProvider } from "@/providers/query-provider";
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="relative antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <QueryProvider>
+            <RouteScrollReset />
             <LoadingScreen />
             <IconPatternBackground />
             <CursorGlow />

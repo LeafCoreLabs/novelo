@@ -1,9 +1,9 @@
 "use client";
 
 import { motion, useScroll, useSpring } from "framer-motion";
+import { usePathname } from "next/navigation";
 
-/** Fixed top bar showing page scroll progress (GPU scaleX). */
-export function ScrollProgress() {
+function HomepageScrollProgress() {
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
 
@@ -17,4 +17,11 @@ export function ScrollProgress() {
       }}
     />
   );
+}
+
+/** Fixed top bar showing page scroll progress. Homepage only — avoids Lenis conflicts. */
+export function ScrollProgress() {
+  const pathname = usePathname();
+  if (pathname !== "/") return null;
+  return <HomepageScrollProgress />;
 }
