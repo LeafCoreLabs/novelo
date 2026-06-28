@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { BookMarked, LogOut, Menu, PenLine, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { logoutAction } from "@/actions/auth";
 import { useScrollSpy } from "@/hooks/use-scroll-spy";
@@ -54,6 +54,13 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
 
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 24));
 
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   const isAdmin = user?.role === "ADMIN" || user?.role === "EDITOR";
 
   function navigate(hash: string) {
@@ -70,8 +77,10 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
     >
       <nav
         className={cn(
-          "flex w-full max-w-6xl items-center justify-between rounded-full px-4 py-2.5 transition-all duration-500",
-          scrolled ? "glass-strong glass-blur shadow-[var(--shadow-soft)]" : "bg-transparent",
+          "relative z-50 flex w-full max-w-6xl items-center justify-between rounded-full px-4 py-2.5 transition-all duration-500",
+          open || scrolled
+            ? "border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-soft)] md:glass-strong md:glass-blur"
+            : "max-md:border max-md:border-[var(--color-border)] max-md:bg-[var(--color-surface)] md:bg-transparent",
         )}
       >
         <Link href="/#top" className="flex items-center gap-2 pl-2 font-semibold tracking-tight">
@@ -130,8 +139,9 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
           <button
             type="button"
             aria-label="Toggle menu"
+            aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="glass flex h-10 w-10 items-center justify-center rounded-full md:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-sm md:hidden"
           >
             {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -140,13 +150,23 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
 
       <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="glass-strong glass-blur absolute top-20 left-4 right-4 rounded-3xl p-4 md:hidden"
-          >
-            <ul className="flex flex-col gap-1">
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close menu"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setOpen(false)}
+              className="fixed inset-0 z-40 bg-black/75 md:hidden"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="fixed left-4 right-4 top-[4.75rem] z-50 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)] md:hidden"
+            >
+              <ul className="flex flex-col gap-1">
               {nav.map((item) => {
                 const id = item.href.replace(/^#/, "");
                 return (
@@ -155,7 +175,7 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
                       item={item}
                       active={activeSection === id}
                       onNavigate={navigate}
-                      className="block w-full text-left rounded-2xl px-4 py-3"
+                      className="block w-full rounded-2xl px-4 py-3 text-left text-[var(--color-foreground)] hover:bg-white/10"
                     />
                   </li>
                 );
@@ -165,7 +185,7 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
                   <Link
                     href="/admin"
                     onClick={() => setOpen(false)}
-                    className="block rounded-2xl px-4 py-3 text-[var(--color-foreground)] hover:bg-white/5"
+                    className="block rounded-2xl px-4 py-3 text-[var(--color-foreground)] hover:bg-white/10"
                   >
                     Write a story
                   </Link>
@@ -195,7 +215,8 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
                 </li>
               )}
             </ul>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </motion.header>
