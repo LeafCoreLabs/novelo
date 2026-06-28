@@ -9,6 +9,7 @@ import { scrollToHash, useLenis } from "@/providers/smooth-scroll-provider";
 import { cn } from "@/lib/utils";
 
 import type { NavUser } from "@/components/landing/navbar";
+import { useNavUser } from "@/hooks/use-nav-user";
 
 const baseColumns = [
   {
@@ -60,12 +61,13 @@ function buildColumns(user: NavUser) {
 export function Footer({
   brand,
   tagline,
-  user = null,
+  user: initialUser = null,
 }: {
   brand: string;
   tagline: string;
   user?: NavUser;
 }) {
+  const user = useNavUser(initialUser);
   const columns = buildColumns(user);
   const lenis = useLenis();
   const [showTop, setShowTop] = useState(false);

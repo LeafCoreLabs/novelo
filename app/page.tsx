@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+
 import { About } from "@/components/landing/about";
 import { Categories } from "@/components/landing/categories";
 import { FaqSection } from "@/components/landing/faq";
@@ -15,12 +17,14 @@ import { getLandingContent } from "@/services/landing.service";
 export const revalidate = 60;
 
 export default async function HomePage() {
+  cookies();
+
   const [content, session] = await Promise.all([getLandingContent(), getSession()]);
   const user = session ? { name: session.name, role: session.role } : null;
 
   return (
     <main className="relative">
-      <SiteNav user={user} />
+      <SiteNav />
 
       <HomeInteractiveShell>
         <Hero hero={content.hero} user={user} />

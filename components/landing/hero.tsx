@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { NavUser } from "@/components/landing/navbar";
 import { useHomeInteractive } from "@/components/landing/home-interactive-provider";
+import { useNavUser } from "@/hooks/use-nav-user";
 import { Magnetic } from "@/components/motion/magnetic";
 import { Button } from "@/components/ui/button";
 import type { HeroSnippet, LandingContent, Story } from "@/types/content";
@@ -49,7 +50,8 @@ function buildHeroCards(
   return cards;
 }
 
-export function Hero({ hero, user = null }: { hero: LandingContent["hero"]; user?: NavUser }) {
+export function Hero({ hero, user: initialUser = null }: { hero: LandingContent["hero"]; user?: NavUser }) {
+  const user = useNavUser(initialUser);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const { scrollY } = useScroll();
   const bookParallaxY = useTransform(scrollY, [0, 600], [0, 80]);

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -64,6 +65,10 @@ function safeNext(next: FormDataEntryValue | null): string {
   return value.startsWith("/") && !value.startsWith("//") ? value : "/";
 }
 
+function revalidateAuthSurfaces() {
+  revalidatePath("/", "layout");
+}
+
 export async function signupAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const parsed = signupSchema.safeParse({
     name: formData.get("name"),
@@ -99,6 +104,7 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
     });
 
     await createSession({ id: user.id, email: user.email, role: user.role as Role, name });
+    revalidateAuthSurfaces();
   } catch {
     return { error: "Something went wrong creating your account." };
   }
@@ -130,6 +136,7 @@ export async function loginAction(_prev: AuthState, formData: FormData): Promise
       role: user.role as Role,
       name: user.profile?.displayName ?? email,
     });
+    revalidateAuthSurfaces();
   } catch {
     return { error: "Something went wrong signing in." };
   }
@@ -166,6 +173,7 @@ export async function adminLoginAction(_prev: AuthState, formData: FormData): Pr
       role: user.role as Role,
       name: user.profile?.displayName ?? email,
     });
+    revalidateAuthSurfaces();
   } catch {
     return { error: "Something went wrong signing in." };
   }
@@ -214,6 +222,7 @@ export async function resetPasswordAction(_prev: AuthState, formData: FormData):
       role: user.role as Role,
       name: user.profile?.displayName ?? user.email,
     });
+    revalidateAuthSurfaces();
   } catch {
     return { error: "Something went wrong resetting your password." };
   }
@@ -223,5 +232,6 @@ export async function resetPasswordAction(_prev: AuthState, formData: FormData):
 
 export async function logoutAction() {
   await destroySession();
+  revalidateAuthSurfaces();
   redirect("/");
 }

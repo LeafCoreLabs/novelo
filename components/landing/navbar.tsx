@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { logoutAction } from "@/actions/auth";
+import { useNavUser } from "@/hooks/use-nav-user";
 import { useScrollSpy } from "@/hooks/use-scroll-spy";
 import { Magnetic } from "@/components/motion/magnetic";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,16 @@ function NavAnchor({
   );
 }
 
-export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; user: NavUser }) {
+export function Navbar({
+  brand,
+  nav,
+  user: initialUser,
+}: {
+  brand: string;
+  nav: NavItem[];
+  user: NavUser;
+}) {
+  const user = useNavUser(initialUser);
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { scrollY } = useScroll();
