@@ -54,8 +54,8 @@ async function uploadLocal(file: File): Promise<UploadedFile> {
 
 async function uploadSupabase(file: File): Promise<UploadedFile> {
   const env = serverEnv();
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Supabase storage requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.");
+  if (!env.SUPABASE_URL) {
+    throw new Error("Supabase storage requires SUPABASE_URL.");
   }
 
   const bucket = env.S3_BUCKET || "novelo-media";
@@ -63,7 +63,12 @@ async function uploadSupabase(file: File): Promise<UploadedFile> {
   const objectPath = `uploads/${randomUUID()}.${ext}`;
   const bytes = Buffer.from(await file.arrayBuffer());
 
-  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+  const apiKey = env.SUPABASE_SERVICE_ROLE_KEY ?? env.SUPABASE_ANON_KEY;
+  if (!apiKey) {
+    throw new Error("Supabase storage requires SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY.");
+  }
+
+  const supabase = createClient(env.SUPABASE_URL, apiKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
