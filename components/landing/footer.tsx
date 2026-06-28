@@ -13,6 +13,7 @@ const columns = [
     title: "Read",
     links: [
       { label: "Latest", href: "/#latest" },
+      { label: "All stories", href: "/stories" },
       { label: "Library", href: "/#popular" },
       { label: "Genres", href: "/#categories" },
       { label: "About", href: "/#about" },
@@ -119,19 +120,26 @@ export function Footer({ brand, tagline }: { brand: string; tagline: string }) {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-[var(--color-border)] pt-6 text-sm text-[var(--color-muted)] sm:flex-row">
-          <p>
-            © {new Date().getFullYear()} {brand}.{" "}
-            <a
-              href={publicEnv.NEXT_PUBLIC_GITHUB_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline-offset-4 hover:underline"
-            >
-              Open source on GitHub
-            </a>
+        <div className="mt-12 space-y-4 border-t border-[var(--color-border)] pt-6 text-sm text-[var(--color-muted)]">
+          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+            <p>
+              © {new Date().getFullYear()} {brand}.{" "}
+              <a
+                href={publicEnv.NEXT_PUBLIC_GITHUB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline-offset-4 hover:underline"
+              >
+                Open source on GitHub
+              </a>
+            </p>
+            <p className="text-center sm:text-right">Next.js · Prisma · Supabase</p>
+          </div>
+          <p className="text-center text-xs leading-relaxed text-[var(--color-muted)]/90 sm:text-left">
+            This website is made and maintained by{" "}
+            <span className="font-medium text-[var(--color-foreground)]/80">LeafCore Labs</span>
+            , Bangalore, IN · Copyright 2026
           </p>
-          <p>Next.js · Prisma · Supabase · Redis</p>
         </div>
       </div>
     </footer>

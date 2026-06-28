@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+import { DeleteStoryButton } from "@/components/admin/delete-story-button";
 import { Button } from "@/components/ui/button";
 import { formatCompact } from "@/lib/utils";
 import { listAdminStories } from "@/services/story.service";
@@ -70,6 +71,7 @@ export default async function AdminPage() {
                     <Eye className="h-4 w-4" /> View
                   </Button>
                 </Link>
+                <DeleteStoryButton storyId={s.id} title={s.title} />
               </li>
             ))}
           </ul>

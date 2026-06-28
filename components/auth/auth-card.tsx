@@ -5,7 +5,13 @@ import { ArrowLeft, ArrowRight, BookMarked, Shield } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
-import { adminLoginAction, loginAction, signupAction, type AuthState } from "@/actions/auth";
+import {
+  adminLoginAction,
+  loginAction,
+  resetPasswordAction,
+  signupAction,
+  type AuthState,
+} from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -15,21 +21,33 @@ export function AuthCard({ mode, next }: { mode: "login" | "signup"; next: strin
   const isLogin = mode === "login";
   const adminDefault = isLogin && (next === "/admin" || next.startsWith("/admin/"));
   const [loginTab, setLoginTab] = useState<"reader" | "admin">(adminDefault ? "admin" : "reader");
+  const [showReset, setShowReset] = useState(false);
 
   const [readerState, readerAction, readerPending] = useActionState(loginAction, initial);
   const [adminState, adminAction, adminPending] = useActionState(adminLoginAction, initial);
+  const [resetState, resetAction, resetPending] = useActionState(resetPasswordAction, initial);
   const [signupState, signupActionBound, signupPending] = useActionState(signupAction, initial);
 
-  const state = isLogin ? (loginTab === "admin" ? adminState : readerState) : signupState;
+  const state = isLogin
+    ? showReset
+      ? resetState
+      : loginTab === "admin"
+        ? adminState
+        : readerState
+    : signupState;
   const formAction = isLogin
-    ? loginTab === "admin"
-      ? adminAction
-      : readerAction
+    ? showReset
+      ? resetAction
+      : loginTab === "admin"
+        ? adminAction
+        : readerAction
     : signupActionBound;
   const pending = isLogin
-    ? loginTab === "admin"
-      ? adminPending
-      : readerPending
+    ? showReset
+      ? resetPending
+      : loginTab === "admin"
+        ? adminPending
+        : readerPending
     : signupPending;
 
   return (
@@ -56,63 +74,76 @@ export function AuthCard({ mode, next }: { mode: "login" | "signup"; next: strin
         </Link>
 
         {isLogin ? (
-          <>
-            <div className="mb-6 grid grid-cols-2 gap-2 rounded-full bg-white/5 p-1">
-              <button
-                type="button"
-                onClick={() => setLoginTab("reader")}
-                className={cn(
-                  "rounded-full px-4 py-2 text-sm font-medium transition-colors",
-                  loginTab === "reader"
-                    ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
-                    : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
-                )}
-              >
-                Reader sign in
-              </button>
-              <button
-                type="button"
-                onClick={() => setLoginTab("admin")}
-                className={cn(
-                  "inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-                  loginTab === "admin"
-                    ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
-                    : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
-                )}
-              >
-                <Shield className="h-3.5 w-3.5" />
-                Admin
-              </button>
-            </div>
+          showReset ? (
+            <>
+              <h1 className="text-center font-display text-2xl font-semibold tracking-tight">
+                Reset your password
+              </h1>
+              <p className="mt-2 text-center text-sm text-[var(--color-muted)]">
+                Enter the email and PIN you set at signup. If you lose your PIN, account recovery
+                is not possible and your reading progress cannot be restored.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="mb-6 grid grid-cols-2 gap-2 rounded-full bg-white/5 p-1">
+                <button
+                  type="button"
+                  onClick={() => setLoginTab("reader")}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                    loginTab === "reader"
+                      ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+                  )}
+                >
+                  Reader sign in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginTab("admin")}
+                  className={cn(
+                    "inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                    loginTab === "admin"
+                      ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+                  )}
+                >
+                  <Shield className="h-3.5 w-3.5" />
+                  Admin
+                </button>
+              </div>
 
-            {loginTab === "reader" ? (
-              <>
-                <h1 className="text-center font-display text-2xl font-semibold tracking-tight">
-                  Welcome back
-                </h1>
-                <p className="mt-2 text-center text-sm text-[var(--color-muted)]">
-                  Sign in to keep reading after the free preview. Paid titles unlock after a
-                  one-time payment.
-                </p>
-              </>
-            ) : (
-              <>
-                <h1 className="text-center font-display text-2xl font-semibold tracking-tight">
-                  Admin sign in
-                </h1>
-                <p className="mt-2 text-center text-sm text-[var(--color-muted)]">
-                  For site owners and editors only. Reader accounts cannot access the admin panel.
-                </p>
-              </>
-            )}
-          </>
+              {loginTab === "reader" ? (
+                <>
+                  <h1 className="text-center font-display text-2xl font-semibold tracking-tight">
+                    Welcome back
+                  </h1>
+                  <p className="mt-2 text-center text-sm text-[var(--color-muted)]">
+                    Sign in to keep reading after the first 5 pages. Paid titles unlock after a
+                    one-time payment.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-center font-display text-2xl font-semibold tracking-tight">
+                    Admin sign in
+                  </h1>
+                  <p className="mt-2 text-center text-sm text-[var(--color-muted)]">
+                    For site owners and editors only. Reader accounts cannot access the admin panel.
+                  </p>
+                </>
+              )}
+            </>
+          )
         ) : (
           <>
             <h1 className="text-center font-display text-2xl font-semibold tracking-tight">
               Create your account
             </h1>
             <p className="mt-2 text-center text-sm text-[var(--color-muted)]">
-              Create a free account to continue reading after the first 2 sections.
+              Create a free account to continue reading after page 5. Set a recovery PIN you will
+              remember.
             </p>
           </>
         )}
@@ -123,20 +154,84 @@ export function AuthCard({ mode, next }: { mode: "login" | "signup"; next: strin
           {!isLogin && (
             <Field label="Name" name="name" type="text" placeholder="Your name" autoComplete="name" />
           )}
+
           <Field
             label="Email"
             name="email"
             type="email"
-            placeholder={loginTab === "admin" ? "admin@novelo.local" : "you@example.com"}
+            placeholder={
+              isLogin && loginTab === "admin" && !showReset
+                ? "admin@novelo.local"
+                : "you@example.com"
+            }
             autoComplete="email"
           />
-          <Field
-            label="Password"
-            name="password"
-            type="password"
-            placeholder="••••••••"
-            autoComplete={isLogin ? "current-password" : "new-password"}
-          />
+
+          {isLogin && showReset ? (
+            <>
+              <Field
+                label="Recovery PIN"
+                name="resetPin"
+                type="password"
+                inputMode="numeric"
+                pattern="\d{4,6}"
+                maxLength={6}
+                placeholder="4–6 digit PIN"
+                autoComplete="off"
+              />
+              <Field
+                label="New password"
+                name="password"
+                type="password"
+                placeholder="••••••••"
+                autoComplete="new-password"
+              />
+              <Field
+                label="Confirm new password"
+                name="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                autoComplete="new-password"
+              />
+            </>
+          ) : (
+            <Field
+              label="Password"
+              name="password"
+              type="password"
+              placeholder="••••••••"
+              autoComplete={isLogin ? "current-password" : "new-password"}
+            />
+          )}
+
+          {!isLogin && (
+            <>
+              <Field
+                label="Recovery PIN"
+                name="resetPin"
+                type="password"
+                inputMode="numeric"
+                pattern="\d{4,6}"
+                maxLength={6}
+                placeholder="4–6 digits (for password reset)"
+                autoComplete="off"
+              />
+              <Field
+                label="Confirm PIN"
+                name="confirmResetPin"
+                type="password"
+                inputMode="numeric"
+                pattern="\d{4,6}"
+                maxLength={6}
+                placeholder="Re-enter your PIN"
+                autoComplete="off"
+              />
+              <p className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-100/90">
+                Save this PIN somewhere safe. If you lose it, you cannot reset your password and
+                you will lose your reading progress, bookmarks, and unlocks tied to this account.
+              </p>
+            </>
+          )}
 
           {state?.error && (
             <p className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-300">{state.error}</p>
@@ -168,9 +263,11 @@ export function AuthCard({ mode, next }: { mode: "login" | "signup"; next: strin
             {pending
               ? "Please wait…"
               : isLogin
-                ? loginTab === "admin"
-                  ? "Sign in to admin"
-                  : "Sign in"
+                ? showReset
+                  ? "Reset password"
+                  : loginTab === "admin"
+                    ? "Sign in to admin"
+                    : "Sign in"
                 : "Create account"}
             {!pending && (
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -178,9 +275,44 @@ export function AuthCard({ mode, next }: { mode: "login" | "signup"; next: strin
           </Button>
         </form>
 
+        {isLogin && loginTab === "reader" && !showReset && (
+          <p className="mt-4 text-center text-sm">
+            <button
+              type="button"
+              onClick={() => setShowReset(true)}
+              className="text-[var(--color-accent)] hover:underline"
+            >
+              Forgot password? Use your PIN
+            </button>
+          </p>
+        )}
+
+        {isLogin && showReset && (
+          <p className="mt-4 text-center text-sm">
+            <button
+              type="button"
+              onClick={() => setShowReset(false)}
+              className="text-[var(--color-accent)] hover:underline"
+            >
+              Back to sign in
+            </button>
+          </p>
+        )}
+
         <p className="mt-6 text-center text-sm text-[var(--color-muted)]">
           {isLogin ? (
-            loginTab === "admin" ? (
+            showReset ? (
+              <>
+                Remember your password?{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowReset(false)}
+                  className="text-[var(--color-accent)] hover:underline"
+                >
+                  Sign in
+                </button>
+              </>
+            ) : loginTab === "admin" ? (
               <>
                 Not an admin?{" "}
                 <button
@@ -219,12 +351,18 @@ function Field({
   type,
   placeholder,
   autoComplete,
+  inputMode,
+  pattern,
+  maxLength,
 }: {
   label: string;
   name: string;
   type: string;
   placeholder: string;
   autoComplete?: string;
+  inputMode?: "numeric" | "text" | "email";
+  pattern?: string;
+  maxLength?: number;
 }) {
   return (
     <label className="block">
@@ -234,6 +372,9 @@ function Field({
         type={type}
         placeholder={placeholder}
         autoComplete={autoComplete}
+        inputMode={inputMode}
+        pattern={pattern}
+        maxLength={maxLength}
         required
         className="glass h-11 w-full rounded-xl px-4 text-sm outline-none placeholder:text-[var(--color-muted)] transition-[box-shadow,background-color] duration-150 focus:ring-2 focus:ring-[var(--color-primary)]"
       />

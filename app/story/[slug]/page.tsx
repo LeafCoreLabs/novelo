@@ -2,20 +2,22 @@ import { BookOpen, Check, Lock, Star } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { unlockStoryAction } from "@/actions/story";
 import { ReviewForm } from "@/components/reader/review-form";
 import { SignInGate } from "@/components/reader/sign-in-gate";
+import { StoryPager } from "@/components/reader/story-pager";
 import { UnlockButton } from "@/components/reader/unlock-button";
 import { SiteNav } from "@/components/site/site-nav";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatCompact } from "@/lib/utils";
 import {
+  FREE_PREVIEW_PAGE_COUNT,
   getStoryBySlug,
-  getVisibleParagraphCount,
-  splitStoryParagraphs,
+  getVisiblePageCount,
+  splitStoryIntoPages,
   userHasAccess,
 } from "@/services/story.service";
 
@@ -35,8 +37,15 @@ function dollars(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export default async function StoryPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function StoryPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
+}) {
   const { slug } = await params;
+  const { page: pageParam } = await searchParams;
   const [story, session] = await Promise.all([getStoryBySlug(slug), getSession()]);
   if (!story) notFound();
 
@@ -47,6 +56,22 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
         session.role,
       )
     : false;
+
+  const pages = splitStoryIntoPages(story.content);
+  const totalPages = Math.max(pages.length, 1);
+  const maxAccessiblePage = getVisiblePageCount(totalPages, Boolean(session), hasAccess);
+  const requestedPage = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
+
+  if (requestedPage > maxAccessiblePage && requestedPage > FREE_PREVIEW_PAGE_COUNT) {
+    redirect(`/story/${slug}?page=${maxAccessiblePage}`);
+  }
+
+  const currentPage = Math.min(requestedPage, maxAccessiblePage);
+  const pageContent = pages[currentPage - 1] ?? "";
+  const lockedPages = totalPages - maxAccessiblePage;
+  const showSignInGate = !session && lockedPages > 0 && currentPage >= maxAccessiblePage;
+  const showPaymentGate =
+    Boolean(session) && !hasAccess && story.priceCents > 0 && lockedPages > 0 && currentPage >= maxAccessiblePage;
 
   const existingReview =
     session && session.id !== story.authorId
@@ -62,14 +87,6 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
       .catch(() => {});
   }
 
-  const paragraphs = splitStoryParagraphs(story.content);
-  const visibleCount = getVisibleParagraphCount(paragraphs.length, hasAccess);
-  const visibleParas = paragraphs.slice(0, visibleCount);
-  const lockedRemaining = paragraphs.length - visibleCount;
-  const showSignInGate = !session && lockedRemaining > 0;
-  const showPaymentGate = Boolean(session) && !hasAccess && story.priceCents > 0;
-  const fadeLastParagraph =
-    (showSignInGate || (showPaymentGate && lockedRemaining > 0)) && visibleParas.length > 0;
   const authorName = story.author?.profile?.displayName ?? "Ravi Ranjan";
 
   return (
@@ -78,10 +95,10 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
       <main className="relative pt-28 pb-28">
         <div className="container-page">
           <Link
-            href="/#latest"
+            href="/stories"
             className="text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
           >
-            ← Back to stories
+            ← All stories
           </Link>
 
           <div className="mt-6 grid gap-8 sm:grid-cols-[200px_1fr]">
@@ -131,8 +148,10 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
                     <Check className="h-4 w-4" /> Unlocked
                   </span>
                 )}
-                {!session && lockedRemaining > 0 && (
-                  <span className="text-[var(--color-muted)]">Free preview · 2 sections</span>
+                {!session && lockedPages > 0 && (
+                  <span className="text-[var(--color-muted)]">
+                    Free preview · first {FREE_PREVIEW_PAGE_COUNT} pages
+                  </span>
                 )}
               </div>
             </div>
@@ -141,35 +160,32 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
 
         <article className="container-page mt-12">
           <div className="mx-auto max-w-2xl">
-            <p className="text-lg font-medium leading-relaxed text-[var(--color-foreground)]">
-              {story.excerpt}
-            </p>
+            {currentPage === 1 && (
+              <p className="text-lg font-medium leading-relaxed text-[var(--color-foreground)]">
+                {story.excerpt}
+              </p>
+            )}
 
-            <div className="prose-reader mt-6 space-y-5 text-[var(--color-foreground)]/85">
-              {visibleParas.map((p, i) => {
-                const isLast = fadeLastParagraph && i === visibleParas.length - 1;
-                return (
-                  <p
-                    key={i}
-                    className={isLast ? "relative" : ""}
-                    style={
-                      isLast
-                        ? {
-                            maskImage: "linear-gradient(to bottom, black 30%, transparent 100%)",
-                            WebkitMaskImage:
-                              "linear-gradient(to bottom, black 30%, transparent 100%)",
-                          }
-                        : undefined
-                    }
-                  >
-                    {p}
-                  </p>
-                );
-              })}
+            <div className="prose-reader mt-6 whitespace-pre-wrap text-[var(--color-foreground)]/85">
+              {pageContent || (
+                <p className="text-[var(--color-muted)]">This page has no content yet.</p>
+              )}
             </div>
 
+            <StoryPager
+              slug={story.slug}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              maxAccessiblePage={maxAccessiblePage}
+            />
+
             {showSignInGate && (
-              <SignInGate slug={story.slug} title={story.title} lockedRemaining={lockedRemaining} />
+              <SignInGate
+                slug={story.slug}
+                title={story.title}
+                lockedRemaining={lockedPages}
+                unit="pages"
+              />
             )}
 
             {showPaymentGate && (
@@ -179,11 +195,8 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
                 </div>
                 <h2 className="mt-4 font-display text-2xl font-semibold">Keep reading</h2>
                 <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-muted)]">
-                  {lockedRemaining > 0
-                    ? `Unlock the rest of “${story.title}” — ${lockedRemaining} more ${
-                        lockedRemaining === 1 ? "section" : "sections"
-                      } await. One-time payment, yours forever.`
-                    : `Unlock the full story. One-time payment, yours forever.`}
+                  Unlock the remaining {lockedPages} {lockedPages === 1 ? "page" : "pages"} of “
+                  {story.title}”. One-time payment, yours forever.
                 </p>
 
                 <form
@@ -195,10 +208,6 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
                   <UnlockButton label={`Unlock for ${dollars(story.priceCents)}`} />
                 </form>
               </div>
-            )}
-
-            {hasAccess && paragraphs.length === 0 && (
-              <p className="mt-6 text-[var(--color-muted)]">This story has no content yet.</p>
             )}
 
             {session && session.id !== story.authorId && (

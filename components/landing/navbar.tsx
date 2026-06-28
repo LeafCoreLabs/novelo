@@ -8,7 +8,6 @@ import { useState } from "react";
 import { logoutAction } from "@/actions/auth";
 import { useScrollSpy } from "@/hooks/use-scroll-spy";
 import { Magnetic } from "@/components/motion/magnetic";
-import { ThemeToggle } from "@/components/site/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { scrollToHash, useLenis } from "@/providers/smooth-scroll-provider";
@@ -98,8 +97,6 @@ export function Navbar({ brand, nav, user }: { brand: string; nav: NavItem[]; us
         </ul>
 
         <div className="flex items-center gap-2">
-          <ThemeToggle />
-
           <div className="hidden items-center gap-2 md:flex">
             {isAdmin && (
               <Link href="/admin">

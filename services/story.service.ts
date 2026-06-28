@@ -139,7 +139,13 @@ export async function userHasAccess(
   return Boolean(purchase);
 }
 
-/** Free paragraphs shown before sign-in or payment. */
+/** Free pages shown before sign-in is required. */
+export const FREE_PREVIEW_PAGE_COUNT = 5;
+
+/** Approximate words per reader page. */
+export const WORDS_PER_PAGE = 280;
+
+/** Legacy paragraph preview count (kept for reference). */
 export const FREE_PREVIEW_PARAGRAPH_COUNT = 2;
 
 export function splitStoryParagraphs(content: string): string[] {
@@ -149,10 +155,76 @@ export function splitStoryParagraphs(content: string): string[] {
     .filter(Boolean);
 }
 
+/** Split story body into paginated chunks for the reader UI. */
+export function splitStoryIntoPages(content: string): string[] {
+  const paragraphs = splitStoryParagraphs(content);
+  if (paragraphs.length === 0) return [];
+
+  const pages: string[] = [];
+  let chunk: string[] = [];
+  let words = 0;
+
+  for (const paragraph of paragraphs) {
+    const paragraphWords = paragraph.split(/\s+/).filter(Boolean).length;
+    if (chunk.length > 0 && words + paragraphWords > WORDS_PER_PAGE) {
+      pages.push(chunk.join("\n\n"));
+      chunk = [paragraph];
+      words = paragraphWords;
+    } else {
+      chunk.push(paragraph);
+      words += paragraphWords;
+    }
+  }
+
+  if (chunk.length > 0) {
+    pages.push(chunk.join("\n\n"));
+  }
+
+  return pages;
+}
+
+export function getVisiblePageCount(
+  totalPages: number,
+  session: boolean,
+  hasFullAccess: boolean,
+): number {
+  if (totalPages === 0) return 0;
+  if (hasFullAccess) return totalPages;
+  if (!session) return Math.min(FREE_PREVIEW_PAGE_COUNT, totalPages);
+  // Signed in but paid story not purchased — still only preview pages.
+  return Math.min(FREE_PREVIEW_PAGE_COUNT, totalPages);
+}
+
 export function getVisibleParagraphCount(
   paragraphCount: number,
   hasFullAccess: boolean,
 ): number {
   if (hasFullAccess) return paragraphCount;
   return Math.min(FREE_PREVIEW_PARAGRAPH_COUNT, paragraphCount);
+}
+
+const STORIES_PAGE_SIZE = 12;
+
+export async function getPublishedStoriesPaginated(page: number, pageSize = STORIES_PAGE_SIZE) {
+  const safePage = Math.max(1, page);
+  const skip = (safePage - 1) * pageSize;
+
+  const [total, rows] = await Promise.all([
+    prisma.story.count({ where: { status: "PUBLISHED", deletedAt: null } }),
+    prisma.story.findMany({
+      where: { status: "PUBLISHED", deletedAt: null },
+      orderBy: { publishedAt: "desc" },
+      skip,
+      take: pageSize,
+      select: cardSelect,
+    }),
+  ]);
+
+  return {
+    stories: rows.map(toCardStory),
+    total,
+    page: safePage,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  };
 }

@@ -7,12 +7,15 @@ export function SignInGate({
   slug,
   title,
   lockedRemaining,
+  unit = "sections",
 }: {
   slug: string;
   title: string;
   lockedRemaining: number;
+  unit?: "pages" | "sections";
 }) {
   const next = `/story/${slug}`;
+  const label = unit === "pages" ? "page" : "section";
 
   return (
     <div className="glass-strong mt-4 rounded-[var(--radius-card)] p-8 text-center">
@@ -22,8 +25,8 @@ export function SignInGate({
       <h2 className="mt-4 font-display text-2xl font-semibold">Sign in to keep reading</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-muted)]">
         {lockedRemaining > 0
-          ? `You’ve read the free preview of “${title}”. Sign in to continue — ${lockedRemaining} more ${
-              lockedRemaining === 1 ? "section" : "sections"
+          ? `You’ve finished the free preview of “${title}”. Sign in to continue — ${lockedRemaining} more ${
+              lockedRemaining === 1 ? label : `${label}s`
             } await.`
           : `Sign in to finish reading “${title}”.`}
       </p>

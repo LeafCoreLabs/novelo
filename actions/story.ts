@@ -113,3 +113,21 @@ export async function unlockStoryAction(formData: FormData): Promise<void> {
   revalidatePath(`/story/${slug}`);
   redirect(`/story/${slug}`);
 }
+
+export async function deleteStoryAction(formData: FormData): Promise<void> {
+  const session = await getSession();
+  if (!isAdmin(session)) redirect("/login?next=/admin");
+
+  const storyId = String(formData.get("storyId") ?? "");
+  if (!storyId) redirect("/admin");
+
+  await prisma.story.update({
+    where: { id: storyId },
+    data: { deletedAt: new Date(), status: "ARCHIVED" },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath("/stories");
+  redirect("/admin");
+}
