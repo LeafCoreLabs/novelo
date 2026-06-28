@@ -11,7 +11,7 @@ const BRAND_TEXT =
 // Short, fixed intro. The page is server-rendered, so we don't wait on the
 // window `load` event (which can fire very late on mobile/slow connections and
 // makes the loader feel stuck). We dismiss on a guaranteed timer instead.
-const INTRO_DURATION = 1300;
+const INTRO_DURATION = 600;
 
 /** Routes where the intro loader should not block interaction. */
 const SKIP_LOADER_PREFIXES = ["/signup", "/login", "/admin", "/story", "/terms", "/privacy"];

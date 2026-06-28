@@ -6,7 +6,7 @@ import { SiteNav } from "@/components/site/site-nav";
 import { Button } from "@/components/ui/button";
 import { getPublishedStoriesPaginated } from "@/services/story.service";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "All stories",

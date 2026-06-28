@@ -1,8 +1,10 @@
+import { unstable_cache } from "next/cache";
+
 import { prisma } from "@/lib/prisma";
 import { getHeroShayari } from "@/lib/shayari";
-import { getHeroStories, getLatestStories, getPopularStories } from "@/services/story.service";
+import { toCardStory, type DbStory } from "@/services/story.service";
 import { getLiveTestimonials } from "@/services/review.service";
-import type { LandingContent } from "@/types/content";
+import type { LandingContent, NavItem } from "@/types/content";
 
 /** How many shuffled shayari to surface in the hero per page load. */
 const HERO_SHAYARI_COUNT = 12;
@@ -92,6 +94,34 @@ const content: LandingContent = {
   },
 };
 
+/** Static nav/brand for layouts — no database round-trip. */
+export const STATIC_BRAND = content.brand;
+export const STATIC_NAV: NavItem[] = content.nav;
+
+const cardSelect = {
+  id: true,
+  slug: true,
+  title: true,
+  excerpt: true,
+  coverUrl: true,
+  priceCents: true,
+  readsCount: true,
+  ratingAvg: true,
+  featured: true,
+  genre: { select: { name: true } },
+  author: { select: { profile: { select: { displayName: true } } } },
+} as const;
+
+function pickHeroStories(rows: DbStory[]) {
+  const featured = rows.filter((s) => s.featured);
+  const rest = rows.filter((s) => !s.featured);
+  return [...featured, ...rest].slice(0, 4).map(toCardStory);
+}
+
+function pickPopularStories(rows: DbStory[]) {
+  return [...rows].sort((a, b) => b.readsCount - a.readsCount).slice(0, 4).map(toCardStory);
+}
+
 const GENRE_META: Record<string, { icon: string; accent: string }> = {
   Fantasy: { icon: "Sparkles", accent: "from-rose-500 to-fuchsia-500" },
   "Science Fiction": { icon: "Rocket", accent: "from-orange-500 to-rose-500" },
@@ -137,16 +167,16 @@ async function getCategoryCounts() {
   }));
 }
 
-/**
- * Returns landing content. Story rails and stats come from the database only.
- */
-export async function getLandingContent(): Promise<LandingContent> {
+async function fetchLandingContent(): Promise<LandingContent> {
   try {
-    const [latest, popular, heroStories, testimonials, categories, storyCount, readsAgg, chapterCount, subscriberCount] =
+    const [publishedStories, testimonials, categories, storyCount, readsAgg, chapterCount, subscriberCount] =
       await Promise.all([
-        getLatestStories(4),
-        getPopularStories(4),
-        getHeroStories(4),
+        prisma.story.findMany({
+          where: { status: "PUBLISHED", deletedAt: null },
+          orderBy: { publishedAt: "desc" },
+          take: 24,
+          select: cardSelect,
+        }),
         getLiveTestimonials(3),
         getCategoryCounts(),
         prisma.story.count({ where: { status: "PUBLISHED", deletedAt: null } }),
@@ -158,11 +188,17 @@ export async function getLandingContent(): Promise<LandingContent> {
         prisma.newsletterSubscriber.count(),
       ]);
 
+    const latest = publishedStories.slice(0, 4).map(toCardStory);
+
     return {
       ...content,
-      hero: { ...content.hero, featuredStories: heroStories, snippets: getHeroShayari(HERO_SHAYARI_COUNT) },
+      hero: {
+        ...content.hero,
+        featuredStories: pickHeroStories(publishedStories),
+        snippets: getHeroShayari(HERO_SHAYARI_COUNT),
+      },
       trending: latest,
-      popular,
+      popular: pickPopularStories(publishedStories),
       testimonials,
       categories,
       stats: [
@@ -180,3 +216,9 @@ export async function getLandingContent(): Promise<LandingContent> {
     return { ...content, hero: { ...content.hero, snippets: getHeroShayari(HERO_SHAYARI_COUNT) } };
   }
 }
+
+/** Cached landing payload — avoids repeated cross-region DB hits on every request. */
+export const getLandingContent = unstable_cache(fetchLandingContent, ["novelo-landing"], {
+  revalidate: 60,
+  tags: ["landing"],
+});

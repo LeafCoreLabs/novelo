@@ -6,7 +6,7 @@ import type { Story } from "@/types/content";
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=600&q=80";
 
-type DbStory = {
+export type DbStory = {
   id: string;
   slug: string;
   title: string;

@@ -1,14 +1,14 @@
 import { Navbar } from "@/components/landing/navbar";
 import { getSession } from "@/lib/auth";
-import { getLandingContent } from "@/services/landing.service";
+import { STATIC_BRAND, STATIC_NAV } from "@/services/landing.service";
 
-/** Server wrapper that supplies the current session + nav config to the Navbar. */
+/** Server wrapper — session only; nav/brand are static (no extra DB fetch). */
 export async function SiteNav() {
-  const [user, content] = await Promise.all([getSession(), getLandingContent()]);
+  const user = await getSession();
   return (
     <Navbar
-      brand={content.brand.name}
-      nav={content.nav}
+      brand={STATIC_BRAND.name}
+      nav={STATIC_NAV}
       user={user ? { name: user.name, role: user.role } : null}
     />
   );

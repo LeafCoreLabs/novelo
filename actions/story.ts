@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -87,6 +87,8 @@ export async function createStoryAction(
 
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/stories");
+  revalidateTag("landing");
   redirect(`/story/${slug}`);
 }
 
@@ -129,5 +131,6 @@ export async function deleteStoryAction(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/stories");
+  revalidateTag("landing");
   redirect("/admin");
 }

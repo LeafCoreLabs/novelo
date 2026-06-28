@@ -11,7 +11,7 @@ import { Testimonials } from "@/components/landing/testimonials";
 import { SiteNav } from "@/components/site/site-nav";
 import { getLandingContent } from "@/services/landing.service";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function HomePage() {
   const content = await getLandingContent();
