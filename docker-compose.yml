@@ -1,0 +1,115 @@
+name: novelo
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: novelo-web
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_URL: postgresql://nobelo:nobelo_secret@postgres:5432/nobelo?schema=public
+      DIRECT_URL: postgresql://nobelo:nobelo_secret@postgres:5432/nobelo?schema=public
+      AUTH_PROVIDER: jwt
+      JWT_SECRET: nobelo_dev_secret_change_me_please
+      REDIS_URL: redis://redis:6379
+      STORAGE_PROVIDER: minio
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: nobelo
+      S3_SECRET_KEY: nobelo_secret
+      S3_BUCKET: nobelo-media
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_NAME: Novelo
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: nobelo-postgres
+    environment:
+      POSTGRES_USER: nobelo
+      POSTGRES_PASSWORD: nobelo_secret
+      POSTGRES_DB: nobelo
+    ports:
+      - "5433:5432"
+    volumes:
+      - nobelo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nobelo -d nobelo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: nobelo-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - nobelo_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: nobelo-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: nobelo
+      MINIO_ROOT_PASSWORD: nobelo_secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - nobelo_miniodata:/data
+
+  # Creates the media bucket on startup.
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (mc alias set local http://minio:9000 nobelo nobelo_secret) do echo 'waiting for minio'; sleep 2; done;
+      mc mb --ignore-existing local/nobelo-media;
+      mc anonymous set download local/nobelo-media;
+      echo 'MinIO bucket ready';
+      exit 0;
+      "
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: nobelo-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  nobelo_pgdata:
+  nobelo_redisdata:
+  nobelo_miniodata:

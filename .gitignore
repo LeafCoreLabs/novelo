@@ -1,0 +1,41 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# prisma
+/prisma/migrations/dev.db*
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env files
+.env
+.env*.local
+!.env.example
+
+# typescript
+*.tsbuildinfo
+
+# docker volumes (if mounted locally)
+/docker/data
+
+# supabase migration artifacts (generated locally)
+/prisma/supabase-chunks/
+
+# user uploads (local dev fallback)
+/public/uploads/

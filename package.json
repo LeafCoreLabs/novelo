@@ -1,0 +1,71 @@
+{
+  "name": "novelo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Novelo — enterprise story publishing platform built with Next.js 15, React 19, Prisma, Supabase, Redis and a Docker-first workflow.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LeafCoreLabs/novelo.git"
+  },
+  "homepage": "https://github.com/LeafCoreLabs/novelo",
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0",
+    "dev:tunnel": "cloudflared tunnel --url http://127.0.0.1:3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:clean": "tsx prisma/clean.ts",
+    "db:reset": "tsx prisma/clean.ts && tsx prisma/seed.ts",
+    "db:setup": "prisma migrate deploy && tsx prisma/seed.ts",
+    "env:supabase": "node scripts/sync-supabase-env.mjs",
+    "db:supabase:verify": "tsx scripts/verify-supabase.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.2.1",
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.1.0",
+    "@supabase/supabase-js": "^2.108.2",
+    "@tanstack/react-query": "^5.62.7",
+    "bcryptjs": "^2.4.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.15.0",
+    "gsap": "^3.12.5",
+    "jose": "^6.2.3",
+    "lenis": "^1.1.18",
+    "lucide-react": "^0.469.0",
+    "next": "^15.5.19",
+    "next-themes": "^0.4.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "tailwind-merge": "^2.6.0",
+    "three": "^0.171.0",
+    "zod": "^3.24.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@types/three": "^0.171.0",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^15.5.19",
+    "prettier": "^3.4.2",
+    "prisma": "^6.2.1",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

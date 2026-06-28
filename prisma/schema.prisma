@@ -1,0 +1,455 @@
+// Novelo database schema.
+// Dev: Docker Postgres. Prod: Supabase Postgres (swap DATABASE_URL only).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  GUEST
+  READER
+  WRITER
+  EDITOR
+  MODERATOR
+  ADMIN
+}
+
+enum StoryStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ChapterStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  FOLLOW
+  REVIEW
+  PUBLISH
+  ANNOUNCEMENT
+  SYSTEM
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  role          Role      @default(READER)
+  emailVerified DateTime?
+  readerTermsAcceptedAt DateTime?
+  writerTermsAcceptedAt DateTime?
+
+  profile  Profile?
+  stories  Story[]    @relation("AuthorStories")
+  comments Comment[]
+  reviews  Review[]
+  ratings  Rating[]
+  likes    Like[]
+  bookmarks Bookmark[]
+  purchases Purchase[]
+  collections Collection[]
+  readingHistory ReadingHistory[]
+  notifications Notification[] @relation("Recipient")
+  sentNotifications Notification[] @relation("Sender")
+  followers Follow[] @relation("Following")
+  following Follow[] @relation("Follower")
+  auditLogs AuditLog[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([role])
+  @@index([deletedAt])
+}
+
+model Profile {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName String
+  handle      String  @unique
+  bio         String  @default("")
+  avatarUrl   String  @default("")
+  bannerUrl   String  @default("")
+  website     String  @default("")
+  followersCount Int  @default(0)
+  followingCount Int  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([handle])
+}
+
+model Genre {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  slug    String  @unique
+  stories Story[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  slug    String  @unique
+  icon    String  @default("Sparkles")
+  accent  String  @default("from-violet-500 to-fuchsia-500")
+  stories Story[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tag {
+  id      String     @id @default(cuid())
+  name    String     @unique
+  slug    String     @unique
+  stories StoryTag[]
+
+  createdAt DateTime @default(now())
+}
+
+model Story {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  excerpt     String      @default("")
+  content     String      @default("")
+  coverUrl    String      @default("")
+  priceCents  Int         @default(0)
+  status      StoryStatus @default(DRAFT)
+  featured    Boolean     @default(false)
+  editorsChoice Boolean   @default(false)
+  readsCount  Int         @default(0)
+  likesCount  Int         @default(0)
+  ratingAvg   Float       @default(0)
+  publishedAt DateTime?
+
+  authorId String
+  author   User   @relation("AuthorStories", fields: [authorId], references: [id], onDelete: Cascade)
+
+  genreId    String?
+  genre      Genre?    @relation(fields: [genreId], references: [id])
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  chapters  Chapter[]
+  tags      StoryTag[]
+  comments  Comment[]
+  reviews   Review[]
+  ratings   Rating[]
+  bookmarks Bookmark[]
+  purchases Purchase[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([status, publishedAt])
+  @@index([authorId])
+  @@index([featured])
+  @@index([deletedAt])
+}
+
+model Chapter {
+  id        String        @id @default(cuid())
+  storyId   String
+  story     Story         @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  title     String
+  order     Int
+  content   String        @default("")
+  status    ChapterStatus @default(DRAFT)
+  wordCount Int           @default(0)
+  publishedAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([storyId, order])
+  @@index([storyId, status])
+}
+
+model StoryTag {
+  storyId String
+  tagId   String
+  story   Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  tag     Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, tagId])
+}
+
+model Comment {
+  id       String  @id @default(cuid())
+  storyId  String
+  story    Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+  body     String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([storyId])
+}
+
+model Review {
+  id      String @id @default(cuid())
+  storyId String
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body    String
+  rating  Int    @default(5)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storyId, userId])
+}
+
+model Rating {
+  id      String @id @default(cuid())
+  storyId String
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  value   Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([storyId, userId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetId  String
+  targetType String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, targetId, targetType])
+  @@index([targetId, targetType])
+}
+
+model Bookmark {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId String
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, storyId])
+}
+
+// A reader's unlock/entitlement for a paid story (mock-payment in dev, Stripe in prod).
+model Purchase {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId    String
+  story      Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  amountCents Int     @default(0)
+  provider   String   @default("mock")
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, storyId])
+  @@index([storyId])
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Collection {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String
+  isPublic Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Follow {
+  id          String @id @default(cuid())
+  followerId  String
+  follower    User   @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User   @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model ReadingHistory {
+  id         String  @id @default(cuid())
+  userId     String
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId    String
+  chapterId  String?
+  progress   Float   @default(0)
+  lastReadAt DateTime @default(now())
+
+  @@unique([userId, storyId])
+  @@index([userId, lastReadAt])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  recipientId String
+  recipient   User             @relation("Recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  senderId    String?
+  sender      User?            @relation("Sender", fields: [senderId], references: [id], onDelete: SetNull)
+  type        NotificationType
+  message     String
+  entityId    String?
+  isRead      Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([recipientId, isRead, createdAt])
+}
+
+model HomepageSection {
+  id        String  @id @default(cuid())
+  key       String  @unique
+  title     String
+  subtitle  String  @default("")
+  order     Int     @default(0)
+  enabled   Boolean @default(true)
+  config    Json    @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Banner {
+  id       String  @id @default(cuid())
+  title    String
+  imageUrl String
+  linkUrl  String  @default("")
+  position String  @default("hero")
+  enabled  Boolean @default(true)
+  order    Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MediaLibrary {
+  id        String @id @default(cuid())
+  url       String
+  key       String @unique
+  mimeType  String
+  size      Int    @default(0)
+  alt       String @default("")
+  folder    String @default("uploads")
+
+  createdAt DateTime @default(now())
+}
+
+model Page {
+  id        String  @id @default(cuid())
+  slug      String  @unique
+  title     String
+  content   Json    @default("{}")
+  published Boolean @default(true)
+  seoTitle  String  @default("")
+  seoDesc   String  @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json   @default("{}")
+
+  updatedAt DateTime @updatedAt
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  enabled   Boolean  @default(true)
+  startsAt  DateTime @default(now())
+  endsAt    DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+model ContactMessage {
+  id      String @id @default(cuid())
+  name    String
+  email   String
+  subject String @default("")
+  message String
+  handled Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id         String @id @default(cuid())
+  reporterId String?
+  targetId   String
+  targetType String
+  reason     String
+  resolved   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id       String  @id @default(cuid())
+  actorId  String?
+  actor    User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action   String
+  entity   String
+  entityId String?
+  metadata Json    @default("{}")
+
+  createdAt DateTime @default(now())
+
+  @@index([entity, createdAt])
+}
+
+model SiteStatistic {
+  id    String   @id @default(cuid())
+  day   DateTime @unique
+  reads Int      @default(0)
+  signups Int    @default(0)
+  publishes Int  @default(0)
+}
