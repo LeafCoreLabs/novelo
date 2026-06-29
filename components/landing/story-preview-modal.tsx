@@ -7,7 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-import { clearScrollLocks, lockBodyScroll, unlockBodyScroll } from "@/components/site/route-scroll-reset";
+import { lockBodyScroll, unlockBodyScroll } from "@/components/site/route-scroll-reset";
 import { Button } from "@/components/ui/button";
 import { formatCompact } from "@/lib/utils";
 import type { Story } from "@/types/content";

@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 
-import { createStoryAction, type StoryFormState } from "@/actions/story";
+import { createStoryAction, updateStoryAction, type StoryFormState } from "@/actions/story";
+import { ChaptersEditor } from "@/components/admin/story-form/chapters-editor";
 import { CoverUploadField } from "@/components/admin/story-form/cover-upload-field";
 import {
   COVER_STORAGE_KEY,
@@ -11,26 +12,49 @@ import {
   PUBLISHED_AT_KEY,
   PUBLISHED_SLUG_KEY,
 } from "@/components/admin/story-form/constants";
-import { StoryContentField } from "@/components/admin/story-form/story-content-field";
 import { StoryDetailsFields } from "@/components/admin/story-form/story-details-fields";
 import { StoryFormStepper } from "@/components/admin/story-form/story-form-stepper";
 import { StoryPublishPanel } from "@/components/admin/story-form/story-publish-panel";
 import { Button } from "@/components/ui/button";
+import type { ChapterInput } from "@/lib/story-chapters";
 import { cn } from "@/lib/utils";
 
 const initial: StoryFormState = {};
 
-export function StoryFormShell({ genres }: { genres: { id: string; name: string }[] }) {
+export type StoryFormInitial = {
+  storyId: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  coverUrl: string;
+  genreId: string | null;
+  published: boolean;
+  chapters: ChapterInput[];
+};
+
+export function StoryFormShell({
+  genres,
+  initialStory,
+}: {
+  genres: { id: string; name: string }[];
+  initialStory?: StoryFormInitial;
+}) {
   const router = useRouter();
-  const [state, formAction, pending] = useActionState(createStoryAction, initial);
-  const [coverUrl, setCoverUrl] = useState("");
-  const [content, setContent] = useState("");
+  const isEdit = Boolean(initialStory);
+  const action = isEdit ? updateStoryAction : createStoryAction;
+  const [state, formAction, pending] = useActionState(action, initial);
+  const [coverUrl, setCoverUrl] = useState(initialStory?.coverUrl ?? "");
+  const [chapters, setChapters] = useState<ChapterInput[]>(
+    initialStory?.chapters ?? [{ title: "Chapter 1", content: "", order: 1 }],
+  );
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [step, setStep] = useState(0);
   const [publishedRecently, setPublishedRecently] = useState(false);
 
   useEffect(() => {
+    if (isEdit) return;
+
     const storedCover = sessionStorage.getItem(COVER_STORAGE_KEY);
     if (storedCover) setCoverUrl(storedCover);
 
@@ -40,10 +64,11 @@ export function StoryFormShell({ genres }: { genres: { id: string; name: string 
       setPublishedRecently(true);
       router.replace("/admin");
     }
-  }, [router]);
+  }, [isEdit, router]);
 
   function updateCoverUrl(url: string) {
     setCoverUrl(url);
+    if (isEdit) return;
     if (url) sessionStorage.setItem(COVER_STORAGE_KEY, url);
     else sessionStorage.removeItem(COVER_STORAGE_KEY);
   }
@@ -68,6 +93,13 @@ export function StoryFormShell({ genres }: { genres: { id: string; name: string 
   }
 
   const lastStep = FORM_STEPS.length - 1;
+  const submitLabel = isEdit
+    ? pending
+      ? "Saving…"
+      : "Save changes"
+    : pending
+      ? "Publishing…"
+      : "Publish story";
 
   function nextStep() {
     setStep((s) => Math.min(s + 1, lastStep));
@@ -83,13 +115,19 @@ export function StoryFormShell({ genres }: { genres: { id: string; name: string 
     pending,
     uploading,
     publishedRecently,
+    isEdit,
+    defaultGenreId: initialStory?.genreId ?? "",
+    defaultPublished: initialStory?.published ?? true,
   };
 
   return (
     <form action={formAction} className="space-y-6 pb-28 md:pb-0">
+      {isEdit && initialStory ? (
+        <input type="hidden" name="storyId" value={initialStory.storyId} />
+      ) : null}
+
       <StoryFormStepper step={step} onStep={setStep} />
 
-      {/* Mobile: all fields stay mounted; only the active step is visible */}
       <div className="space-y-6 md:hidden">
         <div className={cn(step !== 0 && "hidden")}>
           <CoverUploadField
@@ -101,17 +139,19 @@ export function StoryFormShell({ genres }: { genres: { id: string; name: string 
           />
         </div>
         <div className={cn(step !== 1 && "hidden")}>
-          <StoryDetailsFields />
+          <StoryDetailsFields
+            defaultTitle={initialStory?.title}
+            defaultExcerpt={initialStory?.excerpt}
+          />
         </div>
         <div className={cn(step !== 2 && "hidden")}>
-          <StoryContentField content={content} onContentChange={setContent} />
+          <ChaptersEditor chapters={chapters} onChange={setChapters} />
         </div>
         <div className={cn(step !== 3 && "hidden")}>
           <StoryPublishPanel {...panelProps} showDesktopSubmit={false} />
         </div>
       </div>
 
-      {/* Desktop: full form */}
       <div className="hidden space-y-6 md:block">
         <CoverUploadField
           coverUrl={coverUrl}
@@ -120,12 +160,14 @@ export function StoryFormShell({ genres }: { genres: { id: string; name: string 
           onCoverUrlChange={updateCoverUrl}
           onFile={onFile}
         />
-        <StoryDetailsFields />
-        <StoryContentField content={content} onContentChange={setContent} />
+        <StoryDetailsFields
+          defaultTitle={initialStory?.title}
+          defaultExcerpt={initialStory?.excerpt}
+        />
+        <ChaptersEditor chapters={chapters} onChange={setChapters} />
         <StoryPublishPanel {...panelProps} />
       </div>
 
-      {/* Mobile sticky footer */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[var(--color-surface)]/95 p-4 backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-3xl gap-2">
           {step > 0 && (
@@ -143,7 +185,7 @@ export function StoryFormShell({ genres }: { genres: { id: string; name: string 
               className="flex-1"
               disabled={pending || uploading || publishedRecently}
             >
-              {pending ? "Publishing…" : "Publish story"}
+              {submitLabel}
             </Button>
           )}
         </div>

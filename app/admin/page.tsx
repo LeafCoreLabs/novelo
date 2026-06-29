@@ -1,4 +1,4 @@
-import { Eye, PenLine, Plus } from "lucide-react";
+import { Eye, Pencil, PenLine, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,20 +14,21 @@ export const metadata: Metadata = { title: "Admin" };
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ published?: string }>;
+  searchParams: Promise<{ published?: string; updated?: string }>;
 }) {
-  const { published } = await searchParams;
+  const { published, updated } = await searchParams;
   const stories = await listAdminStories();
+  const bannerSlug = published ?? updated;
 
   return (
     <div>
-      {published ? <PublishSuccessBanner slug={published} /> : null}
+      {bannerSlug ? <PublishSuccessBanner slug={bannerSlug} updated={Boolean(updated)} /> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Your stories</h1>
           <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Write, publish, and share your work. Published stories appear on the homepage.
+            Write chapter-by-chapter, publish, and edit any story from here.
           </p>
         </div>
         <Link href="/admin/stories/new">
@@ -49,7 +50,7 @@ export default async function AdminPage({
         ) : (
           <ul className="divide-y divide-[var(--color-border)]">
             {stories.map((s) => (
-              <li key={s.id} className="flex items-center gap-4 p-4">
+              <li key={s.id} className="flex flex-wrap items-center gap-3 p-4 sm:gap-4">
                 <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-white/5">
                   {s.coverUrl && (
                     <Image src={s.coverUrl} alt={s.title} fill sizes="48px" className="object-cover" />
@@ -58,7 +59,8 @@ export default async function AdminPage({
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{s.title}</p>
                   <p className="text-xs text-[var(--color-muted)]">
-                    {formatCompact(s.readsCount)} reads
+                    {formatCompact(s.readsCount)} reads · {s._count.chapters}{" "}
+                    {s._count.chapters === 1 ? "chapter" : "chapters"}
                   </p>
                 </div>
                 <span
@@ -70,6 +72,11 @@ export default async function AdminPage({
                 >
                   {s.status.toLowerCase()}
                 </span>
+                <Link href={`/admin/stories/${s.slug}/edit`}>
+                  <Button variant="ghost" size="sm">
+                    <Pencil className="h-4 w-4" /> Edit
+                  </Button>
+                </Link>
                 <Link href={`/story/${s.slug}`}>
                   <Button variant="ghost" size="sm">
                     <Eye className="h-4 w-4" /> View

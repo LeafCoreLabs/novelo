@@ -11,6 +11,9 @@ export function StoryPublishPanel({
   publishedRecently,
   showMeta = true,
   showDesktopSubmit = true,
+  isEdit = false,
+  defaultGenreId = "",
+  defaultPublished = true,
 }: {
   genres: { id: string; name: string }[];
   error?: string;
@@ -19,38 +22,51 @@ export function StoryPublishPanel({
   publishedRecently: boolean;
   showMeta?: boolean;
   showDesktopSubmit?: boolean;
+  isEdit?: boolean;
+  defaultGenreId?: string;
+  defaultPublished?: boolean;
 }) {
+  const submitLabel = isEdit
+    ? pending
+      ? "Saving…"
+      : "Save changes"
+    : pending
+      ? "Publishing…"
+      : "Publish story";
+
   return (
     <>
-      {showMeta && <StoryMetaFields genres={genres} />}
+      {showMeta && <StoryMetaFields genres={genres} defaultGenreId={defaultGenreId} />}
 
       <label className="flex items-center gap-3 text-sm">
         <input
           type="checkbox"
           name="publish"
-          defaultChecked
+          defaultChecked={defaultPublished}
           disabled={publishedRecently}
           className="h-4 w-4 accent-[var(--color-primary)]"
         />
-        Publish now (uncheck to save as draft)
+        {isEdit ? "Published (uncheck for draft)" : "Publish now (uncheck to save as draft)"}
       </label>
 
-      <label className="flex items-start gap-3 text-sm text-[var(--color-muted)]">
-        <input
-          type="checkbox"
-          name="agreeWriterTerms"
-          required
-          disabled={publishedRecently}
-          className="mt-1 h-4 w-4 accent-[var(--color-primary)]"
-        />
-        <span>
-          I agree to the{" "}
-          <Link href="/terms" className="text-[var(--color-accent)] hover:underline">
-            writer terms
-          </Link>{" "}
-          and confirm I have the rights to publish this story.
-        </span>
-      </label>
+      {!isEdit && (
+        <label className="flex items-start gap-3 text-sm text-[var(--color-muted)]">
+          <input
+            type="checkbox"
+            name="agreeWriterTerms"
+            required
+            disabled={publishedRecently}
+            className="mt-1 h-4 w-4 accent-[var(--color-primary)]"
+          />
+          <span>
+            I agree to the{" "}
+            <Link href="/terms" className="text-[var(--color-accent)] hover:underline">
+              writer terms
+            </Link>{" "}
+            and confirm I have the rights to publish this story.
+          </span>
+        </label>
+      )}
 
       {publishedRecently && (
         <p className="rounded-xl bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
@@ -65,7 +81,7 @@ export function StoryPublishPanel({
       {showDesktopSubmit && (
         <div className="hidden md:block">
           <Button type="submit" size="lg" disabled={pending || uploading || publishedRecently}>
-            {pending ? "Publishing…" : "Publish story"}
+            {submitLabel}
           </Button>
         </div>
       )}

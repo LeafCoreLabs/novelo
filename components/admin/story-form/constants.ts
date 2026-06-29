@@ -5,7 +5,7 @@ export const PUBLISHED_AT_KEY = "novelo_published_at";
 export const FORM_STEPS = [
   { id: "cover", label: "Cover" },
   { id: "details", label: "Details" },
-  { id: "write", label: "Write" },
+  { id: "write", label: "Chapters" },
   { id: "publish", label: "Publish" },
 ] as const;
 

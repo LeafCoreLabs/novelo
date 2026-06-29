@@ -2,6 +2,11 @@ import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import {
+  chapterPositionToGlobalPage,
+  storyUrl,
+  type ReaderChapter,
+} from "@/lib/story-chapters";
 import { cn } from "@/lib/utils";
 
 function pageNumbers(current: number, total: number, maxAccessible: number): number[] {
@@ -20,28 +25,88 @@ function pageNumbers(current: number, total: number, maxAccessible: number): num
   return [...pages].sort((a, b) => a - b);
 }
 
+function adjacentPages(
+  chapters: ReaderChapter[],
+  chapterOrder: number,
+  pageInChapter: number,
+): { prev: { chapterOrder: number; page: number } | null; next: { chapterOrder: number; page: number } | null } {
+  const chapterIndex = chapters.findIndex((c) => c.order === chapterOrder);
+  const chapter = chapters[chapterIndex];
+  if (!chapter) return { prev: null, next: null };
+
+  if (pageInChapter > 1) {
+    return {
+      prev: { chapterOrder, page: pageInChapter - 1 },
+      next:
+        pageInChapter < chapter.pageCount
+          ? { chapterOrder, page: pageInChapter + 1 }
+          : chapters[chapterIndex + 1]
+            ? { chapterOrder: chapters[chapterIndex + 1]!.order, page: 1 }
+            : null,
+    };
+  }
+
+  const prevChapter = chapters[chapterIndex - 1];
+  return {
+    prev: prevChapter
+      ? { chapterOrder: prevChapter.order, page: prevChapter.pageCount }
+      : null,
+    next:
+      chapter.pageCount > 1
+        ? { chapterOrder, page: 2 }
+        : chapters[chapterIndex + 1]
+          ? { chapterOrder: chapters[chapterIndex + 1]!.order, page: 1 }
+          : null,
+  };
+}
+
 export function StoryPager({
   slug,
-  currentPage,
+  chapters,
+  currentChapterOrder,
+  currentPageInChapter,
   totalPages,
-  maxAccessiblePage,
+  maxAccessibleGlobalPage,
   freePreviewCount,
   isLoggedIn,
 }: {
   slug: string;
-  currentPage: number;
+  chapters: ReaderChapter[];
+  currentChapterOrder: number;
+  currentPageInChapter: number;
   totalPages: number;
-  maxAccessiblePage: number;
+  maxAccessibleGlobalPage: number;
   freePreviewCount: number;
   isLoggedIn: boolean;
 }) {
-  if (totalPages <= 1) return null;
+  const currentChapter = chapters.find((c) => c.order === currentChapterOrder);
+  if (!currentChapter || totalPages <= 1) return null;
 
-  const prevPage = currentPage > 1 ? currentPage - 1 : null;
-  const nextPage = currentPage < totalPages ? currentPage + 1 : null;
-  const nextLocked = nextPage !== null && nextPage > maxAccessiblePage;
-  const lockedCount = Math.max(totalPages - maxAccessiblePage, 0);
-  const visiblePages = pageNumbers(currentPage, totalPages, maxAccessiblePage);
+  const { prev, next } = adjacentPages(chapters, currentChapterOrder, currentPageInChapter);
+
+  const prevGlobal = prev
+    ? chapterPositionToGlobalPage(chapters, prev.chapterOrder, prev.page)
+    : null;
+  const nextGlobal = next
+    ? chapterPositionToGlobalPage(chapters, next.chapterOrder, next.page)
+    : null;
+
+  const prevAccessible = prevGlobal !== null && prevGlobal <= maxAccessibleGlobalPage;
+  const nextAccessible = nextGlobal !== null && nextGlobal <= maxAccessibleGlobalPage;
+  const nextLocked = next !== null && !nextAccessible;
+
+  const lockedCount = Math.max(totalPages - maxAccessibleGlobalPage, 0);
+
+  let maxAccessibleInChapter = 0;
+  for (let p = 1; p <= currentChapter.pageCount; p += 1) {
+    const global = chapterPositionToGlobalPage(chapters, currentChapterOrder, p);
+    if (global !== null && global <= maxAccessibleGlobalPage) maxAccessibleInChapter = p;
+  }
+
+  const visiblePages = pageNumbers(currentPageInChapter, currentChapter.pageCount, maxAccessibleInChapter);
+
+  const globalCurrent =
+    chapterPositionToGlobalPage(chapters, currentChapterOrder, currentPageInChapter) ?? 1;
 
   return (
     <>
@@ -51,11 +116,14 @@ export function StoryPager({
       >
         <div className="text-center">
           <p className="text-sm font-medium text-[var(--color-foreground)]">
-            Page {currentPage} of {totalPages}
+            {currentChapter.title} · Page {currentPageInChapter} of {currentChapter.pageCount}
+          </p>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">
+            Overall page {globalCurrent} of {totalPages}
           </p>
           {!isLoggedIn && lockedCount > 0 && (
             <p className="mt-1 text-xs text-[var(--color-muted)]">
-              Free preview · pages 1–{Math.min(freePreviewCount, totalPages)}
+              Free preview · first {Math.min(freePreviewCount, totalPages)} pages
               {lockedCount > 0 ? ` · ${lockedCount} locked` : ""}
             </p>
           )}
@@ -65,8 +133,10 @@ export function StoryPager({
           {visiblePages.map((pageNum, index) => {
             const prevNum = visiblePages[index - 1];
             const showEllipsis = prevNum !== undefined && pageNum - prevNum > 1;
-            const locked = pageNum > maxAccessiblePage;
-            const active = pageNum === currentPage;
+            const globalPage =
+              chapterPositionToGlobalPage(chapters, currentChapterOrder, pageNum) ?? pageNum;
+            const locked = globalPage > maxAccessibleGlobalPage;
+            const active = pageNum === currentPageInChapter;
 
             return (
               <span key={pageNum} className="flex items-center gap-2">
@@ -82,8 +152,8 @@ export function StoryPager({
                   </span>
                 ) : (
                   <Link
-                    href={`/story/${slug}?page=${pageNum}`}
-                    prefetch={Math.abs(pageNum - currentPage) <= 1}
+                    href={storyUrl(slug, currentChapterOrder, pageNum)}
+                    prefetch={Math.abs(pageNum - currentPageInChapter) <= 1}
                     className={cn(
                       "flex h-9 w-9 items-center justify-center rounded-full text-sm transition-colors",
                       active
@@ -101,8 +171,8 @@ export function StoryPager({
         </div>
 
         <div className="flex w-full max-w-sm items-center justify-between gap-3">
-          {prevPage ? (
-            <Link href={`/story/${slug}?page=${prevPage}`} prefetch className="flex-1">
+          {prev && prevAccessible ? (
+            <Link href={storyUrl(slug, prev.chapterOrder, prev.page)} prefetch className="flex-1">
               <Button variant="glass" size="sm" className="w-full">
                 <ChevronLeft className="h-4 w-4" /> Previous
               </Button>
@@ -111,8 +181,8 @@ export function StoryPager({
             <div className="flex-1" />
           )}
 
-          {nextPage && !nextLocked ? (
-            <Link href={`/story/${slug}?page=${nextPage}`} prefetch className="flex-1">
+          {next && nextAccessible ? (
+            <Link href={storyUrl(slug, next.chapterOrder, next.page)} prefetch className="flex-1">
               <Button size="sm" className="w-full">
                 Next <ChevronRight className="h-4 w-4" />
               </Button>
@@ -131,8 +201,8 @@ export function StoryPager({
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
-          {prevPage ? (
-            <Link href={`/story/${slug}?page=${prevPage}`} prefetch className="flex-1">
+          {prev && prevAccessible ? (
+            <Link href={storyUrl(slug, prev.chapterOrder, prev.page)} prefetch className="flex-1">
               <Button variant="glass" size="sm" className="w-full">
                 <ChevronLeft className="h-4 w-4" /> Prev
               </Button>
@@ -141,12 +211,13 @@ export function StoryPager({
             <div className="flex-1" />
           )}
 
-          <span className="shrink-0 text-xs font-medium text-[var(--color-muted)]">
-            {currentPage} / {totalPages}
+          <span className="shrink-0 text-center text-xs font-medium text-[var(--color-muted)]">
+            {currentPageInChapter}/{currentChapter.pageCount}
+            <span className="block text-[10px]">{currentChapter.title}</span>
           </span>
 
-          {nextPage && !nextLocked ? (
-            <Link href={`/story/${slug}?page=${nextPage}`} prefetch className="flex-1">
+          {next && nextAccessible ? (
+            <Link href={storyUrl(slug, next.chapterOrder, next.page)} prefetch className="flex-1">
               <Button size="sm" className="w-full">
                 Next <ChevronRight className="h-4 w-4" />
               </Button>

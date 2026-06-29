@@ -101,11 +101,49 @@ export async function getHeroStories(take = 4): Promise<Story[]> {
 }
 
 export async function getStoryBySlug(slug: string) {
-  return prisma.story.findFirst({
+  const story = await prisma.story.findFirst({
     where: { slug, deletedAt: null },
     include: {
       genre: { select: { name: true } },
       author: { select: { profile: { select: { displayName: true, avatarUrl: true } } } },
+      chapters: {
+        where: { deletedAt: null },
+        orderBy: { order: "asc" },
+        select: { id: true, title: true, order: true, content: true, status: true },
+      },
+    },
+  });
+
+  if (!story) return null;
+
+  if (story.chapters.length === 0 && story.content.trim()) {
+    await prisma.chapter.create({
+      data: {
+        storyId: story.id,
+        title: "Chapter 1",
+        order: 1,
+        content: story.content,
+        status: story.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+        wordCount: story.content.trim().split(/\s+/).filter(Boolean).length,
+      },
+    });
+
+    return getStoryBySlug(slug);
+  }
+
+  return story;
+}
+
+export async function getStoryForEdit(slug: string, userId: string) {
+  return prisma.story.findFirst({
+    where: { slug, deletedAt: null, authorId: userId },
+    include: {
+      genre: { select: { name: true } },
+      chapters: {
+        where: { deletedAt: null },
+        orderBy: { order: "asc" },
+        select: { id: true, title: true, order: true, content: true },
+      },
     },
   });
 }
@@ -122,6 +160,7 @@ export async function listAdminStories() {
       readsCount: true,
       coverUrl: true,
       createdAt: true,
+      _count: { select: { chapters: true } },
     },
   });
 }

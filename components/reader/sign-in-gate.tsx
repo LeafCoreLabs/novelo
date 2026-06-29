@@ -2,6 +2,7 @@ import { ArrowRight, LogIn, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { storyUrl } from "@/lib/story-chapters";
 import { FREE_PREVIEW_PAGE_COUNT } from "@/services/story.service";
 
 export function SignInGate({
@@ -9,15 +10,17 @@ export function SignInGate({
   title,
   lockedRemaining,
   unit = "sections",
-  nextPage = FREE_PREVIEW_PAGE_COUNT + 1,
+  nextChapterOrder = 1,
+  nextPageInChapter = FREE_PREVIEW_PAGE_COUNT + 1,
 }: {
   slug: string;
   title: string;
   lockedRemaining: number;
   unit?: "pages" | "sections";
-  nextPage?: number;
+  nextChapterOrder?: number;
+  nextPageInChapter?: number;
 }) {
-  const next = `/story/${slug}?page=${nextPage}`;
+  const next = storyUrl(slug, nextChapterOrder, nextPageInChapter);
   const label = unit === "pages" ? "page" : "section";
 
   return (
@@ -26,7 +29,7 @@ export function SignInGate({
         <LogIn className="h-5 w-5" />
       </div>
       <h2 className="mt-4 font-display text-xl font-semibold sm:text-2xl">
-        Sign in to read page {nextPage} and beyond
+        Sign in to keep reading
       </h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-muted)]">
         {lockedRemaining > 0

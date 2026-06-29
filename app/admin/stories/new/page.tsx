@@ -19,8 +19,8 @@ export default async function NewStoryPage() {
       </Link>
       <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight">Write a story</h1>
       <p className="mt-1 text-sm text-[var(--color-muted)]">
-        Add a thumbnail, a teaser, and the full text. Readers get the first five pages free; sign-in
-        unlocks the rest.
+        Add a cover, teaser, and chapters. Readers get the first five pages free; sign-in unlocks
+        the rest.
       </p>
       <div className="mt-8">
         <StoryForm genres={genres} />

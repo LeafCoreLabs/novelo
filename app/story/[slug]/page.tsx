@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { ChapterNav } from "@/components/reader/chapter-nav";
 import { ReaderScrollReset } from "@/components/reader/reader-scroll-reset";
 import { ReviewForm } from "@/components/reader/review-form";
 import { SignInGate } from "@/components/reader/sign-in-gate";
@@ -11,13 +12,19 @@ import { StoryPager } from "@/components/reader/story-pager";
 import { StoryReaderUnlock } from "@/components/reader/story-reader-unlock";
 import { SiteNav } from "@/components/site/site-nav";
 import { getSession } from "@/lib/auth";
+import {
+  buildReaderChapters,
+  chapterPositionToGlobalPage,
+  globalPageToChapterPosition,
+  storyUrl,
+  totalReaderPages,
+} from "@/lib/story-chapters";
 import { prisma } from "@/lib/prisma";
 import { formatCompact } from "@/lib/utils";
 import {
   FREE_PREVIEW_PAGE_COUNT,
   getStoryBySlug,
   getVisiblePageCount,
-  splitStoryIntoPages,
 } from "@/services/story.service";
 
 export const dynamic = "force-dynamic";
@@ -37,28 +44,59 @@ export default async function StoryPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; chapter?: string }>;
 }) {
   const { slug } = await params;
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, chapter: chapterParam } = await searchParams;
   const [story, session] = await Promise.all([getStoryBySlug(slug), getSession()]);
   if (!story) notFound();
 
-  const pages = splitStoryIntoPages(story.content);
-  const totalPages = Math.max(pages.length, 1);
-  const isLoggedIn = Boolean(session);
-  const maxAccessiblePage = getVisiblePageCount(totalPages, isLoggedIn);
-  const requestedPage = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
+  const readerChapters = buildReaderChapters(
+    story.chapters.map((ch) => ({
+      id: ch.id,
+      order: ch.order,
+      title: ch.title,
+      content: ch.content,
+    })),
+  );
 
-  if (requestedPage > maxAccessiblePage) {
-    redirect(`/story/${slug}?page=${maxAccessiblePage}`);
+  const totalPages = totalReaderPages(readerChapters);
+  const isLoggedIn = Boolean(session);
+  const maxAccessibleGlobalPage = getVisiblePageCount(totalPages, isLoggedIn);
+
+  let chapterOrder = Math.max(1, Number.parseInt(chapterParam ?? "1", 10) || 1);
+  let pageInChapter = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
+
+  if (!chapterParam && pageParam) {
+    const legacyGlobal = Math.max(1, Number.parseInt(pageParam, 10) || 1);
+    const resolved = globalPageToChapterPosition(readerChapters, legacyGlobal);
+    if (resolved) {
+      redirect(storyUrl(slug, resolved.chapter.order, resolved.pageInChapter));
+    }
   }
 
-  const currentPage = Math.min(requestedPage, maxAccessiblePage);
-  const pageContent = pages[currentPage - 1] ?? "";
-  const lockedPages = totalPages - maxAccessiblePage;
-  const showSignInGate = !session && lockedPages > 0 && currentPage >= maxAccessiblePage;
-  const showFullHeader = currentPage === 1;
+  const currentChapter = readerChapters.find((c) => c.order === chapterOrder) ?? readerChapters[0];
+  if (!currentChapter) notFound();
+
+  chapterOrder = currentChapter.order;
+  pageInChapter = Math.min(Math.max(1, pageInChapter), currentChapter.pageCount);
+
+  const globalPage =
+    chapterPositionToGlobalPage(readerChapters, chapterOrder, pageInChapter) ?? 1;
+
+  if (globalPage > maxAccessibleGlobalPage) {
+    const maxPos = globalPageToChapterPosition(readerChapters, maxAccessibleGlobalPage);
+    if (maxPos) {
+      redirect(storyUrl(slug, maxPos.chapter.order, maxPos.pageInChapter));
+    }
+  }
+
+  const pageContent = currentChapter.pages[pageInChapter - 1] ?? "";
+  const lockedPages = totalPages - maxAccessibleGlobalPage;
+  const showSignInGate = !session && lockedPages > 0 && globalPage >= maxAccessibleGlobalPage;
+  const showFullHeader = globalPage === 1;
+
+  const nextLockedPos = globalPageToChapterPosition(readerChapters, maxAccessibleGlobalPage + 1);
 
   const existingReview =
     session && session.id !== story.authorId
@@ -89,9 +127,9 @@ export default async function StoryPage({
               >
                 ← Stories
               </Link>
-              <p className="min-w-0 truncate text-sm font-medium">{story.title}</p>
+              <p className="min-w-0 truncate text-sm font-medium">{currentChapter.title}</p>
               <span className="shrink-0 text-xs text-[var(--color-muted)]">
-                {currentPage}/{totalPages}
+                {pageInChapter}/{currentChapter.pageCount}
               </span>
             </div>
           </div>
@@ -134,6 +172,9 @@ export default async function StoryPage({
                   <span className="flex items-center gap-1">
                     <BookOpen className="h-4 w-4" /> {formatCompact(story.readsCount)} reads
                   </span>
+                  <span>
+                    {readerChapters.length} {readerChapters.length === 1 ? "chapter" : "chapters"}
+                  </span>
                   {!session && lockedPages > 0 && (
                     <span className="text-[var(--color-muted)]">
                       Free preview · first {FREE_PREVIEW_PAGE_COUNT} pages
@@ -148,20 +189,27 @@ export default async function StoryPage({
         <article id="reader-page-top" className="container-page mt-6 scroll-mt-24 sm:mt-12 sm:scroll-mt-28">
           <div className="mx-auto max-w-2xl">
             <StoryReaderUnlock />
-            <ReaderScrollReset page={currentPage} />
+            <ReaderScrollReset page={globalPage} />
+
+            <ChapterNav
+              slug={story.slug}
+              chapters={readerChapters}
+              currentChapterOrder={chapterOrder}
+              maxAccessibleGlobalPage={maxAccessibleGlobalPage}
+              isLoggedIn={isLoggedIn}
+            />
 
             <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-white/5 px-4 py-3 text-sm sm:mb-6">
               <span className="font-medium text-[var(--color-foreground)]">
-                Page {currentPage} of {totalPages}
+                {currentChapter.title} · Page {pageInChapter} of {currentChapter.pageCount}
               </span>
-              {!isLoggedIn && lockedPages > 0 && (
-                <span className="text-xs text-[var(--color-muted)]">
-                  Free preview · {maxAccessiblePage} of {totalPages} pages
-                </span>
-              )}
+              <span className="text-xs text-[var(--color-muted)]">
+                Overall {globalPage} / {totalPages}
+                {!isLoggedIn && lockedPages > 0 ? ` · preview ${maxAccessibleGlobalPage}` : ""}
+              </span>
             </div>
 
-            {currentPage === 1 && (
+            {globalPage === 1 && (
               <p className="text-base font-medium leading-relaxed text-[var(--color-foreground)] sm:text-lg">
                 {story.excerpt}
               </p>
@@ -175,9 +223,11 @@ export default async function StoryPage({
 
             <StoryPager
               slug={story.slug}
-              currentPage={currentPage}
+              chapters={readerChapters}
+              currentChapterOrder={chapterOrder}
+              currentPageInChapter={pageInChapter}
               totalPages={totalPages}
-              maxAccessiblePage={maxAccessiblePage}
+              maxAccessibleGlobalPage={maxAccessibleGlobalPage}
               freePreviewCount={FREE_PREVIEW_PAGE_COUNT}
               isLoggedIn={isLoggedIn}
             />
@@ -189,6 +239,8 @@ export default async function StoryPage({
                   title={story.title}
                   lockedRemaining={lockedPages}
                   unit="pages"
+                  nextChapterOrder={nextLockedPos?.chapter.order ?? chapterOrder}
+                  nextPageInChapter={nextLockedPos?.pageInChapter ?? pageInChapter + 1}
                 />
               </div>
             )}
