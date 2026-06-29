@@ -13,18 +13,21 @@ export function clearScrollLocks(options: ClearScrollLockOptions = {}) {
   const { restoreScroll = false } = options;
   const scrollY = Number.parseInt(document.body.dataset.scrollLockY ?? "0", 10);
 
-  document.body.style.removeProperty("overflow");
-  document.body.style.removeProperty("position");
-  document.body.style.removeProperty("top");
-  document.body.style.removeProperty("left");
-  document.body.style.removeProperty("right");
-  document.body.style.removeProperty("width");
-  document.body.style.removeProperty("height");
+  for (const el of [document.body, document.documentElement]) {
+    el.style.removeProperty("overflow");
+    el.style.removeProperty("position");
+    el.style.removeProperty("top");
+    el.style.removeProperty("left");
+    el.style.removeProperty("right");
+    el.style.removeProperty("width");
+    el.style.removeProperty("height");
+    el.style.removeProperty("touch-action");
+  }
+
   delete document.body.dataset.scrollLockY;
 
-  document.documentElement.style.removeProperty("overflow");
-  document.documentElement.classList.remove("lenis", "lenis-smooth", "lenis-stopped");
-  document.body.classList.remove("lenis", "lenis-smooth", "lenis-stopped");
+  document.documentElement.classList.remove("lenis", "lenis-smooth", "lenis-stopped", "lenis-scrolling");
+  document.body.classList.remove("lenis", "lenis-smooth", "lenis-stopped", "lenis-scrolling");
 
   if (restoreScroll && scrollY > 0) {
     window.scrollTo(0, scrollY);
@@ -48,17 +51,30 @@ export function unlockBodyScroll(restoreScroll = true) {
   clearScrollLocks({ restoreScroll });
 }
 
+function runScrollUnlock() {
+  clearScrollLocks();
+  document.body.style.removeProperty("overflow");
+  document.documentElement.style.removeProperty("overflow");
+}
+
 /** Resets stale scroll locks whenever the App Router route changes or bfcache restores. */
 export function RouteScrollReset() {
   const pathname = usePathname();
 
   useEffect(() => {
-    clearScrollLocks();
+    runScrollUnlock();
+    const raf = requestAnimationFrame(runScrollUnlock);
+    const timer = window.setTimeout(runScrollUnlock, 0);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
+    };
   }, [pathname]);
 
   useEffect(() => {
     const onPageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) clearScrollLocks();
+      if (event.persisted) runScrollUnlock();
     };
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);

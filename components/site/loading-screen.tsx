@@ -46,6 +46,9 @@ export function LoadingScreen() {
     if (skip) {
       setVisible(false);
       setReady(true);
+      clearScrollLocks();
+      document.body.style.removeProperty("overflow");
+      document.documentElement.style.removeProperty("overflow");
       return;
     }
 

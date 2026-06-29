@@ -36,7 +36,15 @@ function isHomepage(pathname: string) {
   return pathname === "/";
 }
 
-/** Lenis smooth-scrolling on the marketing homepage only; native scroll elsewhere. */
+function canUseLenis() {
+  if (typeof window === "undefined") return false;
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const finePointer = window.matchMedia("(pointer: fine)").matches;
+  // Touch/mobile uses native scroll only — Lenis breaks scroll after client navigation.
+  return !prefersReduced && finePointer;
+}
+
+/** Lenis smooth-scrolling on the marketing homepage (desktop only); native scroll elsewhere. */
 export function SmoothScrollProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const lenisRef = useRef<Lenis | null>(null);
@@ -44,39 +52,37 @@ export function SmoothScrollProvider({ children }: { children: ReactNode }) {
   const [lenis, setLenis] = useState<Lenis | null>(null);
 
   useEffect(() => {
-    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const enableLenis = isHomepage(pathname) && !prefersReduced;
-    const instance = lenisRef.current;
-
-    if (!enableLenis) {
-      instance?.stop();
+    const teardown = () => {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+      lenisRef.current?.destroy();
+      lenisRef.current = null;
       setLenis(null);
       clearScrollLocks();
+    };
+
+    const enableLenis = isHomepage(pathname) && canUseLenis();
+
+    if (!enableLenis) {
+      teardown();
       return;
     }
 
-    let active = instance;
-    if (!active) {
-      active = new Lenis({
-        lerp: 0.1,
-        smoothWheel: true,
-        wheelMultiplier: 1,
-        touchMultiplier: 1.5,
-        autoRaf: false,
-      });
-      lenisRef.current = active;
-
-      const raf = (time: number) => {
-        lenisRef.current?.raf(time);
-        rafRef.current = requestAnimationFrame(raf);
-      };
-      rafRef.current = requestAnimationFrame(raf);
-    } else {
-      active.start();
-      active.resize();
-    }
-
+    const active = new Lenis({
+      lerp: 0.1,
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 1.5,
+      autoRaf: false,
+    });
+    lenisRef.current = active;
     setLenis(active);
+
+    const raf = (time: number) => {
+      lenisRef.current?.raf(time);
+      rafRef.current = requestAnimationFrame(raf);
+    };
+    rafRef.current = requestAnimationFrame(raf);
 
     const onPageShow = (event: PageTransitionEvent) => {
       if (!event.persisted || !lenisRef.current || !isHomepage(pathname)) return;
@@ -86,17 +92,12 @@ export function SmoothScrollProvider({ children }: { children: ReactNode }) {
     };
 
     window.addEventListener("pageshow", onPageShow);
-    return () => window.removeEventListener("pageshow", onPageShow);
-  }, [pathname]);
 
-  useEffect(() => {
     return () => {
-      cancelAnimationFrame(rafRef.current);
-      lenisRef.current?.destroy();
-      lenisRef.current = null;
-      clearScrollLocks();
+      window.removeEventListener("pageshow", onPageShow);
+      teardown();
     };
-  }, []);
+  }, [pathname]);
 
   return <LenisContext.Provider value={lenis}>{children}</LenisContext.Provider>;
 }
