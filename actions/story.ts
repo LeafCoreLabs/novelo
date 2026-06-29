@@ -30,6 +30,15 @@ const storySchema = z.object({
   }).optional(),
 });
 
+function isNextRedirect(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String((error as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
+  );
+}
+
 async function uniqueSlug(base: string, excludeStoryId?: string): Promise<string> {
   const root = slugify(base) || "story";
   let slug = root;
@@ -65,20 +74,35 @@ async function upsertChapters(
 
   const toDelete = existing.filter((c) => !keepIds.has(c.id)).map((c) => c.id);
   if (toDelete.length > 0) {
-    await prisma.chapter.updateMany({
-      where: { id: { in: toDelete } },
-      data: { deletedAt: new Date() },
-    });
+    await prisma.chapter.deleteMany({ where: { id: { in: toDelete } } });
   }
 
-  for (const chapter of chapters) {
+  // Soft-deleted rows still occupy the (storyId, order) unique index — remove them.
+  await prisma.chapter.deleteMany({
+    where: { storyId, deletedAt: { not: null } },
+  });
+
+  // Avoid order unique collisions while rewriting rows.
+  for (let i = 0; i < chapters.length; i += 1) {
+    const chapter = chapters[i];
+    if (chapter?.id) {
+      await prisma.chapter.update({
+        where: { id: chapter.id },
+        data: { order: 10_000 + i },
+      });
+    }
+  }
+
+  for (let i = 0; i < chapters.length; i += 1) {
+    const chapter = chapters[i]!;
     const data = {
       title: chapter.title,
-      order: chapter.order,
+      order: i + 1,
       content: chapter.content,
       wordCount: wordCount(chapter.content),
       status: published ? ("PUBLISHED" as const) : ("DRAFT" as const),
       publishedAt: published ? new Date() : null,
+      deletedAt: null,
     };
 
     if (chapter.id) {
@@ -142,8 +166,10 @@ export async function createStoryAction(
     return { error: "You just published this story. Check your dashboard." };
   }
 
+  let slug: string;
+
   try {
-    const slug = await uniqueSlug(data.title);
+    slug = await uniqueSlug(data.title);
     const story = await prisma.story.create({
       data: {
         title: data.title,
@@ -168,10 +194,13 @@ export async function createStoryAction(
     });
 
     revalidateStoryPaths(slug);
-    redirect(`/admin?published=${encodeURIComponent(slug)}`);
-  } catch {
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    console.error("[createStoryAction]", error);
     return { error: "Could not save the story. Please try again." };
   }
+
+  redirect(`/admin?published=${encodeURIComponent(slug)}`);
 }
 
 export async function updateStoryAction(
@@ -210,6 +239,8 @@ export async function updateStoryAction(
   const mergedContent = mergeChapterContent(chapters);
   const pageCount = countStoryPagesFromChapters(chapters);
 
+  let slug = existing.slug;
+
   try {
     const story = await prisma.story.update({
       where: { id: storyId },
@@ -226,11 +257,15 @@ export async function updateStoryAction(
     });
 
     await upsertChapters(story.id, chapters, published);
-    revalidateStoryPaths(story.slug);
-    redirect(`/admin?updated=${encodeURIComponent(story.slug)}`);
-  } catch {
+    slug = story.slug;
+    revalidateStoryPaths(slug);
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    console.error("[updateStoryAction]", error);
     return { error: "Could not update the story. Please try again." };
   }
+
+  redirect(`/admin?updated=${encodeURIComponent(slug)}`);
 }
 
 export async function deleteStoryAction(formData: FormData): Promise<void> {

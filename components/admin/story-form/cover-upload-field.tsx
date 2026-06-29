@@ -53,7 +53,6 @@ export function CoverUploadField({
           <p className="text-xs text-[var(--color-muted)]">PNG, JPG, WEBP up to 8MB.</p>
         </div>
       </div>
-      <input type="hidden" name="coverUrl" value={coverUrl} />
     </Field>
   );
 }

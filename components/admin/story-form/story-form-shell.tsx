@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
 import { createStoryAction, updateStoryAction, type StoryFormState } from "@/actions/story";
 import { ChaptersEditor } from "@/components/admin/story-form/chapters-editor";
@@ -32,6 +32,10 @@ export type StoryFormInitial = {
   chapters: ChapterInput[];
 };
 
+function stepSectionClass(step: number, activeStep: number) {
+  return cn(activeStep !== step && "hidden", "md:block");
+}
+
 export function StoryFormShell({
   genres,
   initialStory,
@@ -51,6 +55,8 @@ export function StoryFormShell({
   const [uploadError, setUploadError] = useState("");
   const [step, setStep] = useState(0);
   const [publishedRecently, setPublishedRecently] = useState(false);
+
+  const chaptersJson = useMemo(() => JSON.stringify(chapters), [chapters]);
 
   useEffect(() => {
     if (isEdit) return;
@@ -101,14 +107,6 @@ export function StoryFormShell({
       ? "Publishing…"
       : "Publish story";
 
-  function nextStep() {
-    setStep((s) => Math.min(s + 1, lastStep));
-  }
-
-  function prevStep() {
-    setStep((s) => Math.max(s - 1, 0));
-  }
-
   const panelProps = {
     genres,
     error: state?.error,
@@ -125,34 +123,12 @@ export function StoryFormShell({
       {isEdit && initialStory ? (
         <input type="hidden" name="storyId" value={initialStory.storyId} />
       ) : null}
+      <input type="hidden" name="coverUrl" value={coverUrl} />
+      <input type="hidden" name="chaptersJson" value={chaptersJson} readOnly />
 
       <StoryFormStepper step={step} onStep={setStep} />
 
-      <div className="space-y-6 md:hidden">
-        <div className={cn(step !== 0 && "hidden")}>
-          <CoverUploadField
-            coverUrl={coverUrl}
-            uploading={uploading}
-            uploadError={uploadError}
-            onCoverUrlChange={updateCoverUrl}
-            onFile={onFile}
-          />
-        </div>
-        <div className={cn(step !== 1 && "hidden")}>
-          <StoryDetailsFields
-            defaultTitle={initialStory?.title}
-            defaultExcerpt={initialStory?.excerpt}
-          />
-        </div>
-        <div className={cn(step !== 2 && "hidden")}>
-          <ChaptersEditor chapters={chapters} onChange={setChapters} />
-        </div>
-        <div className={cn(step !== 3 && "hidden")}>
-          <StoryPublishPanel {...panelProps} showDesktopSubmit={false} />
-        </div>
-      </div>
-
-      <div className="hidden space-y-6 md:block">
+      <div className={stepSectionClass(0, step)}>
         <CoverUploadField
           coverUrl={coverUrl}
           uploading={uploading}
@@ -160,23 +136,32 @@ export function StoryFormShell({
           onCoverUrlChange={updateCoverUrl}
           onFile={onFile}
         />
+      </div>
+
+      <div className={stepSectionClass(1, step)}>
         <StoryDetailsFields
           defaultTitle={initialStory?.title}
           defaultExcerpt={initialStory?.excerpt}
         />
+      </div>
+
+      <div className={stepSectionClass(2, step)}>
         <ChaptersEditor chapters={chapters} onChange={setChapters} />
-        <StoryPublishPanel {...panelProps} />
+      </div>
+
+      <div className={stepSectionClass(3, step)}>
+        <StoryPublishPanel {...panelProps} showDesktopSubmit />
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[var(--color-surface)]/95 p-4 backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-3xl gap-2">
           {step > 0 && (
-            <Button type="button" variant="outline" className="flex-1" onClick={prevStep}>
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setStep((s) => s - 1)}>
               Back
             </Button>
           )}
           {step < lastStep ? (
-            <Button type="button" className="flex-1" onClick={nextStep}>
+            <Button type="button" className="flex-1" onClick={() => setStep((s) => s + 1)}>
               Next
             </Button>
           ) : (

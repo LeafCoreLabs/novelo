@@ -1,7 +1,6 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { useMemo } from "react";
 
 import { Field } from "@/components/admin/story-form/field";
 import { countStoryPagesFromChapters } from "@/lib/story-chapters";
@@ -14,7 +13,6 @@ export function ChaptersEditor({
   chapters: ChapterInput[];
   onChange: (chapters: ChapterInput[]) => void;
 }) {
-  const chaptersJson = useMemo(() => JSON.stringify(chapters), [chapters]);
   const totalPages = countStoryPagesFromChapters(chapters);
 
   function updateChapter(index: number, patch: Partial<ChapterInput>) {
@@ -39,8 +37,6 @@ export function ChaptersEditor({
 
   return (
     <div className="space-y-4">
-      <input type="hidden" name="chaptersJson" value={chaptersJson} readOnly />
-
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium">Chapters</p>
