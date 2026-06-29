@@ -118,7 +118,7 @@ export function StoryPager({
               </Button>
             </Link>
           ) : nextLocked ? (
-            <Link href="#sign-in-gate" className="flex-1">
+            <Link href="#sign-in-gate" scroll className="flex-1">
               <Button size="sm" className="w-full">
                 <Lock className="h-4 w-4" /> Sign in
               </Button>
@@ -129,7 +129,7 @@ export function StoryPager({
         </div>
       </nav>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-border)] bg-[var(--color-background)]/95 px-4 py-3 backdrop-blur-md sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
           {prevPage ? (
             <Link href={`/story/${slug}?page=${prevPage}`} prefetch className="flex-1">
@@ -152,7 +152,7 @@ export function StoryPager({
               </Button>
             </Link>
           ) : nextLocked ? (
-            <Link href="#sign-in-gate" className="flex-1">
+            <Link href="#sign-in-gate" scroll className="flex-1">
               <Button size="sm" className="w-full">
                 <Lock className="h-4 w-4" /> Sign in
               </Button>

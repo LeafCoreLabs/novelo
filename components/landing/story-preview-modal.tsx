@@ -12,6 +12,30 @@ import { Button } from "@/components/ui/button";
 import { formatCompact } from "@/lib/utils";
 import type { Story } from "@/types/content";
 
+function lockBodyScroll() {
+  const scrollY = window.scrollY;
+  document.body.dataset.scrollLockY = String(scrollY);
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
+  document.body.style.overflow = "hidden";
+}
+
+function unlockBodyScroll() {
+  const scrollY = Number.parseInt(document.body.dataset.scrollLockY ?? "0", 10);
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.left = "";
+  document.body.style.right = "";
+  document.body.style.width = "";
+  document.body.style.overflow = "";
+  delete document.body.dataset.scrollLockY;
+  window.scrollTo(0, scrollY);
+  clearScrollLocks();
+}
+
 export function StoryPreviewModal({
   story,
   onClose,
@@ -30,14 +54,16 @@ export function StoryPreviewModal({
 
   useEffect(() => {
     if (!story) return;
+    lockBodyScroll();
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
+
     return () => {
       document.removeEventListener("keydown", onKey);
-      clearScrollLocks();
+      unlockBodyScroll();
     };
   }, [story, onClose]);
 
@@ -49,7 +75,7 @@ export function StoryPreviewModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[70] flex items-end justify-center overscroll-contain p-0 sm:items-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-label={`Preview: ${story.title}`}
@@ -57,15 +83,15 @@ export function StoryPreviewModal({
           <button
             type="button"
             aria-label="Close preview"
-            className="absolute inset-0 bg-black/70"
+            className="absolute inset-0 bg-[var(--color-background)]/92"
             onClick={onClose}
           />
           <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-strong relative z-10 grid w-full max-w-lg gap-6 overflow-hidden rounded-[var(--radius-xl)] p-6 sm:grid-cols-[140px_1fr]"
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="story-card relative z-10 grid max-h-[90dvh] w-full max-w-lg gap-6 overflow-y-auto rounded-t-[var(--radius-xl)] p-6 sm:max-h-none sm:rounded-[var(--radius-xl)] sm:grid-cols-[140px_1fr]"
           >
             <button
               type="button"
@@ -102,7 +128,7 @@ export function StoryPreviewModal({
               </div>
               <div className="mt-auto flex flex-wrap gap-2 pt-6">
                 {story.slug && (
-                  <Link href={`/story/${story.slug}`} className="flex-1">
+                  <Link href={`/story/${story.slug}`} prefetch className="flex-1" onClick={onClose}>
                     <Button size="lg" className="group w-full">
                       Read preview
                       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

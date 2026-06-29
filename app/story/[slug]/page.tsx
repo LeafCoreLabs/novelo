@@ -78,9 +78,9 @@ export default async function StoryPage({
   return (
     <>
       <SiteNav />
-      <main className="relative pt-20 pb-24 sm:pt-28 sm:pb-28">
+      <main className="relative pt-20 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pt-28 sm:pb-28">
         {!showFullHeader && (
-          <div className="sticky top-[4.5rem] z-20 border-b border-[var(--color-border)] bg-[var(--color-background)]/90 backdrop-blur-md sm:hidden">
+          <div className="sticky top-[4.5rem] z-20 border-b border-[var(--color-border)] bg-[var(--color-background)] sm:hidden">
             <div className="container-page flex items-center justify-between gap-3 py-2.5">
               <Link
                 href="/stories"
@@ -181,7 +181,7 @@ export default async function StoryPage({
             />
 
             {showSignInGate && (
-              <div id="sign-in-gate">
+              <div id="sign-in-gate" className="scroll-mt-24">
                 <SignInGate
                   slug={story.slug}
                   title={story.title}
