@@ -64,8 +64,8 @@ const ITEMS: Item[] = [
 /**
  * Dark, crimson line-icon "doodle" wallpaper for the WHOLE page.
  * Rendered once as a fixed layer behind all content — pure SVG (lucide) + CSS,
- * no WebGL. Because it's a single fixed, GPU-composited layer it doesn't
- * repaint on scroll, keeping the page smooth.
+ * no WebGL. A single soft blur + frosted scrim keeps the wallpaper subtle on
+ * every device without per-component backdrop-filter cost while scrolling.
  */
 export function IconPatternBackground() {
   return (
@@ -74,46 +74,56 @@ export function IconPatternBackground() {
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
       style={{ transform: "translateZ(0)" }}
     >
-      {/* Near-black wallpaper with a warm crimson glow from the top. */}
+      {/* Wallpaper art — slightly scaled so blur never clips edges. */}
+      <div className="absolute inset-0 scale-[1.07] blur-[6px] sm:blur-[8px]">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(110% 75% at 50% -10%, rgba(220,20,60,0.22) 0%, rgba(120,12,34,0.10) 32%, rgba(10,6,12,0.97) 62%, #08050a 100%)",
+          }}
+        />
+
+        {ITEMS.map((item, i) => {
+          const { Icon } = item;
+          return (
+            <div
+              key={i}
+              className="absolute"
+              style={{
+                top: item.top,
+                left: item.left,
+                transform: `rotate(${item.rotate}deg) translateZ(0)`,
+                willChange: "transform",
+                opacity: item.opacity,
+                filter: `drop-shadow(0 0 9px rgba(220,20,60,0.5))${item.blur ? ` blur(${item.blur}px)` : ""}`,
+                color: "#d11d3f",
+                animation: "var(--animate-float)",
+                animationDuration: `${item.duration}s`,
+                animationDelay: `${item.delay}s`,
+              }}
+            >
+              <Icon size={item.size} strokeWidth={1.25} />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Frosted scrim — extra softness on mobile + desktop (one fixed layer). */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 backdrop-blur-[10px] sm:backdrop-blur-[12px]"
         style={{
-          background:
-            "radial-gradient(110% 75% at 50% -10%, rgba(220,20,60,0.22) 0%, rgba(120,12,34,0.10) 32%, rgba(10,6,12,0.97) 62%, #08050a 100%)",
+          WebkitBackdropFilter: "blur(10px)",
+          backgroundColor: "color-mix(in srgb, var(--color-background) 42%, transparent)",
         }}
       />
-
-      {/* Scattered glowing icons (transform-only float = composited, cheap). */}
-      {ITEMS.map((item, i) => {
-        const { Icon } = item;
-        return (
-          <div
-            key={i}
-            className="absolute"
-            style={{
-              top: item.top,
-              left: item.left,
-              transform: `rotate(${item.rotate}deg) translateZ(0)`,
-              willChange: "transform",
-              opacity: item.opacity,
-              filter: `drop-shadow(0 0 9px rgba(220,20,60,0.5))${item.blur ? ` blur(${item.blur}px)` : ""}`,
-              color: "#d11d3f",
-              animation: "var(--animate-float)",
-              animationDuration: `${item.duration}s`,
-              animationDelay: `${item.delay}s`,
-            }}
-          >
-            <Icon size={item.size} strokeWidth={1.25} />
-          </div>
-        );
-      })}
 
       {/* Edge vignette to keep text readable over the whole page. */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(90% 70% at 50% 40%, transparent 0%, rgba(8,5,10,0.45) 80%)",
+            "radial-gradient(90% 70% at 50% 40%, transparent 0%, rgba(8,5,10,0.5) 80%)",
         }}
       />
     </div>

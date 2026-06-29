@@ -61,6 +61,15 @@
   --shadow-soft: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 30px 80px -50px rgba(120, 40, 60, 0.4);
 }
 
+:root.light html::before {
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    transparent 0%,
+    rgba(246, 244, 249, 0.35) 55%,
+    rgba(246, 244, 249, 0.72) 100%
+  );
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -97,8 +106,8 @@
     background: radial-gradient(
       ellipse at 50% 0%,
       transparent 0%,
-      rgba(8, 4, 24, 0.25) 60%,
-      rgba(8, 4, 24, 0.55) 100%
+      rgba(8, 4, 24, 0.28) 60%,
+      rgba(8, 4, 24, 0.58) 100%
     );
   }
 
