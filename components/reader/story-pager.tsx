@@ -9,28 +9,39 @@ export function StoryPager({
   currentPage,
   totalPages,
   maxAccessiblePage,
+  freePreviewCount,
 }: {
   slug: string;
   currentPage: number;
   totalPages: number;
   maxAccessiblePage: number;
+  freePreviewCount: number;
 }) {
   if (totalPages <= 1) return null;
 
   const prevPage = currentPage > 1 ? currentPage - 1 : null;
   const nextPage = currentPage < totalPages ? currentPage + 1 : null;
   const nextLocked = nextPage !== null && nextPage > maxAccessiblePage;
+  const lockedCount = Math.max(totalPages - maxAccessiblePage, 0);
 
   return (
     <nav
       aria-label="Story pages"
       className="mt-10 flex flex-col items-center gap-4 border-t border-[var(--color-border)] pt-8"
     >
-      <p className="text-sm text-[var(--color-muted)]">
-        Page {currentPage} of {totalPages}
-      </p>
+      <div className="text-center">
+        <p className="text-sm font-medium text-[var(--color-foreground)]">
+          Page {currentPage} of {totalPages}
+        </p>
+        {lockedCount > 0 && (
+          <p className="mt-1 text-xs text-[var(--color-muted)]">
+            Free preview · pages 1–{Math.min(freePreviewCount, totalPages)}
+            {lockedCount > 0 ? ` · ${lockedCount} locked` : ""}
+          </p>
+        )}
+      </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-2">
+      <div className="flex max-w-full flex-wrap items-center justify-center gap-2 px-2">
         {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
           const locked = pageNum > maxAccessiblePage;
           const active = pageNum === currentPage;

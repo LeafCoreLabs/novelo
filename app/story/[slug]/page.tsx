@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { unlockStoryAction } from "@/actions/story";
+import { ReaderScrollReset } from "@/components/reader/reader-scroll-reset";
 import { ReviewForm } from "@/components/reader/review-form";
 import { SignInGate } from "@/components/reader/sign-in-gate";
 import { StoryPager } from "@/components/reader/story-pager";
@@ -62,7 +63,7 @@ export default async function StoryPage({
   const maxAccessiblePage = getVisiblePageCount(totalPages, Boolean(session), hasAccess);
   const requestedPage = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
 
-  if (requestedPage > maxAccessiblePage && requestedPage > FREE_PREVIEW_PAGE_COUNT) {
+  if (requestedPage > maxAccessiblePage) {
     redirect(`/story/${slug}?page=${maxAccessiblePage}`);
   }
 
@@ -158,8 +159,21 @@ export default async function StoryPage({
           </div>
         </div>
 
-        <article className="container-page mt-12">
+        <article id="reader-page-top" className="container-page mt-12 scroll-mt-28">
           <div className="mx-auto max-w-2xl">
+            <ReaderScrollReset page={currentPage} />
+
+            <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-white/5 px-4 py-3 text-sm">
+              <span className="font-medium text-[var(--color-foreground)]">
+                Page {currentPage} of {totalPages}
+              </span>
+              {!hasAccess && lockedPages > 0 && (
+                <span className="text-xs text-[var(--color-muted)]">
+                  {session ? "Preview" : "Free preview"} · {maxAccessiblePage} of {totalPages} pages
+                </span>
+              )}
+            </div>
+
             {currentPage === 1 && (
               <p className="text-lg font-medium leading-relaxed text-[var(--color-foreground)]">
                 {story.excerpt}
@@ -177,6 +191,7 @@ export default async function StoryPage({
               currentPage={currentPage}
               totalPages={totalPages}
               maxAccessiblePage={maxAccessiblePage}
+              freePreviewCount={FREE_PREVIEW_PAGE_COUNT}
             />
 
             {showSignInGate && (
