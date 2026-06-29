@@ -108,6 +108,7 @@ const cardSelect = {
   readsCount: true,
   ratingAvg: true,
   featured: true,
+  pageCount: true,
   genre: { select: { name: true } },
   author: { select: { profile: { select: { displayName: true } } } },
 } as const;

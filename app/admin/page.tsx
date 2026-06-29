@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+import { PublishSuccessBanner } from "@/components/admin/publish-success-banner";
 import { DeleteStoryButton } from "@/components/admin/delete-story-button";
 import { Button } from "@/components/ui/button";
 import { formatCompact } from "@/lib/utils";
@@ -14,11 +15,18 @@ function price(cents: number) {
   return cents > 0 ? `$${(cents / 100).toFixed(2)}` : "Free";
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ published?: string }>;
+}) {
+  const { published } = await searchParams;
   const stories = await listAdminStories();
 
   return (
     <div>
+      {published ? <PublishSuccessBanner slug={published} /> : null}
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Your stories</h1>

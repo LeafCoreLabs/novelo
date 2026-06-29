@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { getSession, isAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { countStoryPages } from "@/lib/reader-pages";
 import { slugify } from "@/lib/utils";
 
 export interface StoryFormState {
@@ -60,6 +61,21 @@ export async function createStoryAction(
   const published = data.publish === "on" || data.publish === "true";
   let slug: string;
 
+  const duplicate = await prisma.story.findFirst({
+    where: {
+      authorId: session.id,
+      title: data.title,
+      deletedAt: null,
+      createdAt: { gte: new Date(Date.now() - 60_000) },
+    },
+    select: { slug: true },
+  });
+  if (duplicate) {
+    return { error: "You just published this story. Check your dashboard." };
+  }
+
+  const pageCount = countStoryPages(data.content);
+
   try {
     slug = await uniqueSlug(data.title);
     await prisma.story.create({
@@ -73,6 +89,7 @@ export async function createStoryAction(
         genreId: data.genreId || null,
         status: published ? "PUBLISHED" : "DRAFT",
         publishedAt: published ? new Date() : null,
+        pageCount,
         authorId: session.id,
       },
     });
@@ -89,7 +106,7 @@ export async function createStoryAction(
   revalidatePath("/admin");
   revalidatePath("/stories");
   revalidateTag("landing");
-  redirect(`/story/${slug}`);
+  redirect(`/admin?published=${encodeURIComponent(slug)}`);
 }
 
 export async function unlockStoryAction(formData: FormData): Promise<void> {

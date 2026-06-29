@@ -1,11 +1,12 @@
 "use client";
 
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ExternalLink, Flame, Lock, Star } from "lucide-react";
+import { BookOpen, ExternalLink, Flame, Lock, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
-import { useHomeInteractive } from "@/components/landing/home-interactive-provider";
+import { useHomeInteractiveOptional } from "@/components/landing/home-interactive-provider";
 import { formatCompact } from "@/lib/utils";
 import type { Story } from "@/types/content";
 
@@ -14,21 +15,32 @@ function priceLabel(cents?: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-/** Premium story card with 3D tilt-on-hover and quick preview modal. */
+function pageLabel(count: number) {
+  return `${count} ${count === 1 ? "page" : "pages"}`;
+}
+
+/** Premium story card with optional preview modal on the homepage. */
 export function StoryCard({ story }: { story: Story }) {
-  const { setPreviewStory } = useHomeInteractive();
+  const interactive = useHomeInteractiveOptional();
+  const [finePointer, setFinePointer] = useState(false);
   const rx = useMotionValue(0);
   const ry = useMotionValue(0);
   const rotateX = useSpring(rx, { stiffness: 150, damping: 18 });
   const rotateY = useSpring(ry, { stiffness: 150, damping: 18 });
 
+  useEffect(() => {
+    setFinePointer(window.matchMedia("(pointer: fine)").matches);
+  }, []);
+
   function onMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (!finePointer) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const px = (e.clientX - rect.left) / rect.width - 0.5;
     const py = (e.clientY - rect.top) / rect.height - 0.5;
     ry.set(px * 12);
     rx.set(-py * 12);
   }
+
   function reset() {
     rx.set(0);
     ry.set(0);
@@ -37,29 +49,38 @@ export function StoryCard({ story }: { story: Story }) {
   const glow = useTransform(rotateY, [-12, 12], ["-20%", "120%"]);
   const isPaid = Boolean(story.priceCents && story.priceCents > 0);
   const href = story.slug ? `/story/${story.slug}` : "#";
+  const pages = Math.max(story.pageCount ?? story.chapters ?? 1, 1);
 
   function onCardClick(e: React.MouseEvent) {
     if (e.shiftKey && story.slug) {
       window.location.assign(href);
       return;
     }
-    e.preventDefault();
-    setPreviewStory(story);
+
+    if (interactive) {
+      e.preventDefault();
+      interactive.setPreviewStory(story);
+      return;
+    }
+
+    if (story.slug) {
+      window.location.assign(href);
+    }
   }
 
   return (
     <motion.article
       onMouseMove={onMove}
       onMouseLeave={reset}
-      style={{ rotateX, rotateY, transformPerspective: 1000 }}
-      whileHover={{ y: -6 }}
+      style={finePointer ? { rotateX, rotateY, transformPerspective: 1000 } : undefined}
+      whileHover={finePointer ? { y: -6 } : undefined}
       className="group glass relative flex h-full flex-col overflow-hidden rounded-[var(--radius-card)] p-3"
     >
       <button
         type="button"
         onClick={onCardClick}
         className="absolute inset-0 z-10 cursor-pointer"
-        aria-label={`Preview ${story.title}`}
+        aria-label={`Open ${story.title}`}
       />
       {story.slug && (
         <Link
@@ -80,13 +101,15 @@ export function StoryCard({ story }: { story: Story }) {
           sizes="(max-width: 768px) 80vw, 280px"
           className="object-cover transition-transform duration-700 group-hover:scale-110"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-        <motion.div
-          aria-hidden
-          style={{ left: glow }}
-          className="pointer-events-none absolute top-0 h-full w-1/3 -skew-x-12 bg-white/10 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-100"
-        />
-        <div className="absolute left-3 top-3 flex items-center gap-2">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        {finePointer && (
+          <motion.div
+            aria-hidden
+            style={{ left: glow }}
+            className="pointer-events-none absolute top-0 h-full w-1/3 -skew-x-12 bg-white/10 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-100"
+          />
+        )}
+        <div className="absolute left-3 top-3 flex flex-wrap items-center gap-2">
           <span className="glass-strong rounded-full px-2.5 py-1 text-xs font-medium">
             {story.genre}
           </span>
@@ -96,10 +119,14 @@ export function StoryCard({ story }: { story: Story }) {
             </span>
           )}
         </div>
-        <div className="absolute bottom-3 left-3 right-3">
-          <h3 className="line-clamp-2 text-base font-semibold leading-tight text-white">
+        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2">
+          <h3 className="line-clamp-2 flex-1 text-base font-semibold leading-tight text-white">
             {story.title}
           </h3>
+          <span className="glass-strong flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium text-white">
+            <BookOpen className="h-3 w-3" />
+            {pageLabel(pages)}
+          </span>
         </div>
       </div>
 

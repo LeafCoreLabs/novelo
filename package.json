@@ -26,7 +26,8 @@
     "db:reset": "tsx prisma/clean.ts && tsx prisma/seed.ts",
     "db:setup": "prisma migrate deploy && tsx prisma/seed.ts",
     "env:supabase": "node scripts/sync-supabase-env.mjs",
-    "db:supabase:verify": "tsx scripts/verify-supabase.ts"
+    "db:supabase:verify": "tsx scripts/verify-supabase.ts",
+    "db:backfill-page-count": "tsx scripts/backfill-page-count.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

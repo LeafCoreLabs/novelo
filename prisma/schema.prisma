@@ -141,6 +141,7 @@ model Story {
   readsCount  Int         @default(0)
   likesCount  Int         @default(0)
   ratingAvg   Float       @default(0)
+  pageCount   Int         @default(1)
   publishedAt DateTime?
 
   authorId String

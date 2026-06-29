@@ -1,7 +1,10 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { countStoryPages, splitStoryIntoPages, splitStoryParagraphs, WORDS_PER_PAGE } from "@/lib/reader-pages";
 import type { Story } from "@/types/content";
+
+export { countStoryPages, splitStoryIntoPages, splitStoryParagraphs, WORDS_PER_PAGE };
 
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=600&q=80";
@@ -16,6 +19,7 @@ export type DbStory = {
   readsCount: number;
   ratingAvg: number;
   featured: boolean;
+  pageCount: number;
   genre: { name: string } | null;
   author: { profile: { displayName: string } | null } | null;
 };
@@ -30,6 +34,7 @@ const cardSelect = {
   readsCount: true,
   ratingAvg: true,
   featured: true,
+  pageCount: true,
   genre: { select: { name: true } },
   author: { select: { profile: { select: { displayName: true } } } },
 } as const;
@@ -44,7 +49,8 @@ export function toCardStory(s: DbStory): Story {
     cover: s.coverUrl || FALLBACK_COVER,
     rating: s.ratingAvg || 4.8,
     reads: s.readsCount,
-    chapters: 1,
+    pageCount: Math.max(s.pageCount, 1),
+    chapters: Math.max(s.pageCount, 1),
     excerpt: s.excerpt,
     priceCents: s.priceCents,
     trending: s.featured,
@@ -142,46 +148,8 @@ export async function userHasAccess(
 /** Free pages shown before sign-in is required. */
 export const FREE_PREVIEW_PAGE_COUNT = 5;
 
-/** Approximate words per reader page. */
-export const WORDS_PER_PAGE = 280;
-
 /** Legacy paragraph preview count (kept for reference). */
 export const FREE_PREVIEW_PARAGRAPH_COUNT = 2;
-
-export function splitStoryParagraphs(content: string): string[] {
-  return content
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-}
-
-/** Split story body into paginated chunks for the reader UI. */
-export function splitStoryIntoPages(content: string): string[] {
-  const paragraphs = splitStoryParagraphs(content);
-  if (paragraphs.length === 0) return [];
-
-  const pages: string[] = [];
-  let chunk: string[] = [];
-  let words = 0;
-
-  for (const paragraph of paragraphs) {
-    const paragraphWords = paragraph.split(/\s+/).filter(Boolean).length;
-    if (chunk.length > 0 && words + paragraphWords > WORDS_PER_PAGE) {
-      pages.push(chunk.join("\n\n"));
-      chunk = [paragraph];
-      words = paragraphWords;
-    } else {
-      chunk.push(paragraph);
-      words += paragraphWords;
-    }
-  }
-
-  if (chunk.length > 0) {
-    pages.push(chunk.join("\n\n"));
-  }
-
-  return pages;
-}
 
 export function getVisiblePageCount(
   totalPages: number,
@@ -227,4 +195,21 @@ export async function getPublishedStoriesPaginated(page: number, pageSize = STOR
     pageSize,
     totalPages: Math.max(1, Math.ceil(total / pageSize)),
   };
+}
+
+/** One-time helper: derive pageCount from story content for existing rows. */
+export async function backfillStoryPageCounts() {
+  const stories = await prisma.story.findMany({
+    where: { deletedAt: null },
+    select: { id: true, content: true },
+  });
+
+  for (const story of stories) {
+    await prisma.story.update({
+      where: { id: story.id },
+      data: { pageCount: countStoryPages(story.content) },
+    });
+  }
+
+  return stories.length;
 }

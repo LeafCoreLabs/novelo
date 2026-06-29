@@ -13,7 +13,7 @@ export default async function NewStoryPage() {
   });
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl px-1 pb-8 sm:px-0">
       <Link href="/admin" className="text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)]">
         ← Back to dashboard
       </Link>

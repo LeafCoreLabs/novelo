@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Lock, Star, X } from "lucide-react";
+import { ArrowRight, BookOpen, Lock, Star, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -98,6 +98,11 @@ export function StoryPreviewModal({
                   <Star className="h-3.5 w-3.5 fill-current" /> {story.rating.toFixed(1)}
                 </span>
                 <span>{formatCompact(story.reads)} reads</span>
+                <span className="flex items-center gap-1">
+                  <BookOpen className="h-3 w-3" />
+                  {Math.max(story.pageCount ?? story.chapters ?? 1, 1)}{" "}
+                  {Math.max(story.pageCount ?? story.chapters ?? 1, 1) === 1 ? "page" : "pages"}
+                </span>
                 <span
                   className={
                     story.priceCents && story.priceCents > 0

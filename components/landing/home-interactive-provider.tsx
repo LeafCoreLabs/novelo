@@ -44,3 +44,8 @@ export function useHomeInteractive() {
   if (!ctx) throw new Error("useHomeInteractive must be used within HomeInteractiveProvider");
   return ctx;
 }
+
+/** Safe variant for story cards used outside the homepage provider (e.g. /stories). */
+export function useHomeInteractiveOptional() {
+  return useContext(HomeInteractiveContext);
+}

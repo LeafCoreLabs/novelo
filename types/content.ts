@@ -9,6 +9,7 @@ export interface Story {
   cover: string;
   rating: number;
   reads: number;
+  pageCount: number;
   chapters: number;
   excerpt: string;
   priceCents?: number;
