@@ -40,7 +40,7 @@ const content: LandingContent = {
     avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300&q=80",
     portrait: "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=900&q=80",
     bioLong:
-      "I'm Ravi Ranjan — an Indian story writer who has spent years crafting serialized fiction rooted in character, culture, and wonder. From sweeping fantasy to quiet sci-fi, everything on Novelo is written and published by me, updated weekly. Sign in to read, and unlock the full story when a tale has you hooked.",
+      "I'm Ravi Ranjan — an Indian story writer who has spent years crafting serialized fiction rooted in character, culture, and wonder. From sweeping fantasy to quiet sci-fi, everything on Novelo is written and published by me, updated weekly. Start reading for free — sign in to continue past the first five pages.",
     highlights: [
       "12 ongoing & completed stories",
       "New chapters every week",
@@ -104,7 +104,6 @@ const cardSelect = {
   title: true,
   excerpt: true,
   coverUrl: true,
-  priceCents: true,
   readsCount: true,
   ratingAvg: true,
   featured: true,

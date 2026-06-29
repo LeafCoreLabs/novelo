@@ -12,7 +12,7 @@ export function StoryDetailsFields() {
         />
       </Field>
 
-      <Field label="Teaser (shown free, before the paywall)">
+      <Field label="Teaser (shown on page 1)">
         <textarea
           name="excerpt"
           required

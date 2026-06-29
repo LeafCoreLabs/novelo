@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { BookOpen, ExternalLink, Flame, Lock, Star } from "lucide-react";
+import { BookOpen, ExternalLink, Flame, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -9,11 +9,6 @@ import { useEffect, useState } from "react";
 import { useHomeInteractiveOptional } from "@/components/landing/home-interactive-provider";
 import { formatCompact } from "@/lib/utils";
 import type { Story } from "@/types/content";
-
-function priceLabel(cents?: number) {
-  if (!cents || cents <= 0) return "Free";
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 function pageLabel(count: number) {
   return `${count} ${count === 1 ? "page" : "pages"}`;
@@ -47,7 +42,6 @@ export function StoryCard({ story }: { story: Story }) {
   }
 
   const glow = useTransform(rotateY, [-12, 12], ["-20%", "120%"]);
-  const isPaid = Boolean(story.priceCents && story.priceCents > 0);
   const href = story.slug ? `/story/${story.slug}` : "#";
   const pages = Math.max(story.pageCount ?? story.chapters ?? 1, 1);
 
@@ -136,18 +130,7 @@ export function StoryCard({ story }: { story: Story }) {
           <span className="flex items-center gap-1 text-amber-400">
             <Star className="h-3.5 w-3.5 fill-current" /> {story.rating.toFixed(1)}
           </span>
-          <motion.span
-            animate={isPaid ? { scale: [1, 1.06, 1] } : {}}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className={
-              isPaid
-                ? "flex items-center gap-1 font-medium text-[var(--color-accent)]"
-                : "flex items-center gap-1 font-medium text-emerald-400"
-            }
-          >
-            {isPaid && <Lock className="h-3 w-3" />}
-            {priceLabel(story.priceCents)}
-          </motion.span>
+          <span className="font-medium text-emerald-400">Free to read</span>
           <span>{formatCompact(story.reads)} reads</span>
         </div>
       </div>

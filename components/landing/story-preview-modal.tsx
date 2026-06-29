@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, BookOpen, Lock, Star, X } from "lucide-react";
+import { ArrowRight, BookOpen, Star, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,11 +11,6 @@ import { clearScrollLocks } from "@/components/site/route-scroll-reset";
 import { Button } from "@/components/ui/button";
 import { formatCompact } from "@/lib/utils";
 import type { Story } from "@/types/content";
-
-function priceLabel(cents?: number) {
-  if (!cents || cents <= 0) return "Free to read";
-  return `$${(cents / 100).toFixed(2)} to unlock`;
-}
 
 export function StoryPreviewModal({
   story,
@@ -103,16 +98,7 @@ export function StoryPreviewModal({
                   {Math.max(story.pageCount ?? story.chapters ?? 1, 1)}{" "}
                   {Math.max(story.pageCount ?? story.chapters ?? 1, 1) === 1 ? "page" : "pages"}
                 </span>
-                <span
-                  className={
-                    story.priceCents && story.priceCents > 0
-                      ? "flex items-center gap-1 text-[var(--color-accent)]"
-                      : "text-emerald-400"
-                  }
-                >
-                  {story.priceCents && story.priceCents > 0 && <Lock className="h-3 w-3" />}
-                  {priceLabel(story.priceCents)}
-                </span>
+                <span className="text-emerald-400">Free to read</span>
               </div>
               <div className="mt-auto flex flex-wrap gap-2 pt-6">
                 {story.slug && (

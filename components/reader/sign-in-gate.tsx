@@ -2,30 +2,35 @@ import { ArrowRight, LogIn, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { FREE_PREVIEW_PAGE_COUNT } from "@/services/story.service";
 
 export function SignInGate({
   slug,
   title,
   lockedRemaining,
   unit = "sections",
+  nextPage = FREE_PREVIEW_PAGE_COUNT + 1,
 }: {
   slug: string;
   title: string;
   lockedRemaining: number;
   unit?: "pages" | "sections";
+  nextPage?: number;
 }) {
-  const next = `/story/${slug}`;
+  const next = `/story/${slug}?page=${nextPage}`;
   const label = unit === "pages" ? "page" : "section";
 
   return (
-    <div className="glass-strong mt-4 rounded-[var(--radius-card)] p-8 text-center">
+    <div className="glass-strong mt-4 rounded-[var(--radius-card)] p-6 text-center sm:p-8">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)]">
         <LogIn className="h-5 w-5" />
       </div>
-      <h2 className="mt-4 font-display text-2xl font-semibold">Sign in to keep reading</h2>
+      <h2 className="mt-4 font-display text-xl font-semibold sm:text-2xl">
+        Sign in to read page {nextPage} and beyond
+      </h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-muted)]">
         {lockedRemaining > 0
-          ? `You’ve finished the free preview of “${title}”. Sign in to continue — ${lockedRemaining} more ${
+          ? `You’ve reached the end of the free preview of “${title}”. Sign in to continue — ${lockedRemaining} more ${
               lockedRemaining === 1 ? label : `${label}s`
             } await.`
           : `Sign in to finish reading “${title}”.`}

@@ -11,10 +11,6 @@ import { listAdminStories } from "@/services/story.service";
 
 export const metadata: Metadata = { title: "Admin" };
 
-function price(cents: number) {
-  return cents > 0 ? `$${(cents / 100).toFixed(2)}` : "Free";
-}
-
 export default async function AdminPage({
   searchParams,
 }: {
@@ -31,7 +27,7 @@ export default async function AdminPage({
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Your stories</h1>
           <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Write, publish, and price your work. Published stories appear on the homepage.
+            Write, publish, and share your work. Published stories appear on the homepage.
           </p>
         </div>
         <Link href="/admin/stories/new">
@@ -62,7 +58,7 @@ export default async function AdminPage({
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{s.title}</p>
                   <p className="text-xs text-[var(--color-muted)]">
-                    {formatCompact(s.readsCount)} reads · {price(s.priceCents)}
+                    {formatCompact(s.readsCount)} reads
                   </p>
                 </div>
                 <span

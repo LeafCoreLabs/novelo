@@ -12,7 +12,6 @@ export interface Story {
   pageCount: number;
   chapters: number;
   excerpt: string;
-  priceCents?: number;
   trending?: boolean;
 }
 

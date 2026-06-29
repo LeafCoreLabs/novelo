@@ -15,7 +15,6 @@ export type DbStory = {
   title: string;
   excerpt: string;
   coverUrl: string;
-  priceCents: number;
   readsCount: number;
   ratingAvg: number;
   featured: boolean;
@@ -30,7 +29,6 @@ const cardSelect = {
   title: true,
   excerpt: true,
   coverUrl: true,
-  priceCents: true,
   readsCount: true,
   ratingAvg: true,
   featured: true,
@@ -52,7 +50,6 @@ export function toCardStory(s: DbStory): Story {
     pageCount: Math.max(s.pageCount, 1),
     chapters: Math.max(s.pageCount, 1),
     excerpt: s.excerpt,
-    priceCents: s.priceCents,
     trending: s.featured,
   };
 }
@@ -122,27 +119,11 @@ export async function listAdminStories() {
       slug: true,
       title: true,
       status: true,
-      priceCents: true,
       readsCount: true,
       coverUrl: true,
       createdAt: true,
     },
   });
-}
-
-/** Whether the signed-in user can read the full story (free, owner/admin, or purchased). */
-export async function userHasAccess(
-  userId: string | null,
-  story: { id: string; priceCents: number; authorId: string },
-  role?: string,
-): Promise<boolean> {
-  if (!userId) return false;
-  if (story.priceCents <= 0) return true;
-  if (userId === story.authorId || role === "ADMIN" || role === "EDITOR") return true;
-  const purchase = await prisma.purchase.findUnique({
-    where: { userId_storyId: { userId, storyId: story.id } },
-  });
-  return Boolean(purchase);
 }
 
 /** Free pages shown before sign-in is required. */
@@ -151,15 +132,9 @@ export const FREE_PREVIEW_PAGE_COUNT = 5;
 /** Legacy paragraph preview count (kept for reference). */
 export const FREE_PREVIEW_PARAGRAPH_COUNT = 2;
 
-export function getVisiblePageCount(
-  totalPages: number,
-  session: boolean,
-  hasFullAccess: boolean,
-): number {
+export function getVisiblePageCount(totalPages: number, isLoggedIn: boolean): number {
   if (totalPages === 0) return 0;
-  if (hasFullAccess) return totalPages;
-  if (!session) return Math.min(FREE_PREVIEW_PAGE_COUNT, totalPages);
-  // Signed in but paid story not purchased — still only preview pages.
+  if (isLoggedIn) return totalPages;
   return Math.min(FREE_PREVIEW_PAGE_COUNT, totalPages);
 }
 

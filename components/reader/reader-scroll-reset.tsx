@@ -7,9 +7,9 @@ export function ReaderScrollReset({ page }: { page: number }) {
   useEffect(() => {
     const el = document.getElementById("reader-page-top");
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.scrollIntoView({ behavior: "auto", block: "start" });
     } else {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: "auto" });
     }
   }, [page]);
 
