@@ -67,7 +67,14 @@ export function LoadingScreen() {
   }, [skip]);
 
   useEffect(() => {
-    if (!ready || skip) return;
+    if (!ready) return;
+
+    if (skip) {
+      clearScrollLocks();
+      document.body.style.removeProperty("overflow");
+      return;
+    }
+
     document.body.style.overflow = visible ? "hidden" : "";
     return () => {
       document.body.style.removeProperty("overflow");

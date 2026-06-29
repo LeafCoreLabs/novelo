@@ -3,12 +3,49 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
-/** Lenis / modals / mobile nav can leave scroll locked after back/forward navigation. */
-export function clearScrollLocks() {
+type ClearScrollLockOptions = {
+  /** Restore scroll position saved by lockBodyScroll (modal close only). */
+  restoreScroll?: boolean;
+};
+
+/** Lenis / modals / mobile nav can leave scroll locked after navigation. */
+export function clearScrollLocks(options: ClearScrollLockOptions = {}) {
+  const { restoreScroll = false } = options;
+  const scrollY = Number.parseInt(document.body.dataset.scrollLockY ?? "0", 10);
+
   document.body.style.removeProperty("overflow");
+  document.body.style.removeProperty("position");
+  document.body.style.removeProperty("top");
+  document.body.style.removeProperty("left");
+  document.body.style.removeProperty("right");
+  document.body.style.removeProperty("width");
+  document.body.style.removeProperty("height");
+  delete document.body.dataset.scrollLockY;
+
   document.documentElement.style.removeProperty("overflow");
   document.documentElement.classList.remove("lenis", "lenis-smooth", "lenis-stopped");
   document.body.classList.remove("lenis", "lenis-smooth", "lenis-stopped");
+
+  if (restoreScroll && scrollY > 0) {
+    window.scrollTo(0, scrollY);
+  }
+}
+
+export function lockBodyScroll() {
+  if (document.body.dataset.scrollLockY) return;
+
+  const scrollY = window.scrollY;
+  document.body.dataset.scrollLockY = String(scrollY);
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
+  document.body.style.overflow = "hidden";
+}
+
+export function unlockBodyScroll(restoreScroll = true) {
+  clearScrollLocks({ restoreScroll });
 }
 
 /** Resets stale scroll locks whenever the App Router route changes or bfcache restores. */

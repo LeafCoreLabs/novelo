@@ -3,9 +3,11 @@
 import { AnimatePresence, motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { BookMarked, LogOut, Menu, PenLine, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { logoutAction } from "@/actions/auth";
+import { clearScrollLocks } from "@/components/site/route-scroll-reset";
 import { useNavUser } from "@/hooks/use-nav-user";
 import { useScrollSpy } from "@/hooks/use-scroll-spy";
 import { Magnetic } from "@/components/motion/magnetic";
@@ -74,6 +76,7 @@ export function Navbar({
   user: NavUser;
 }) {
   const user = useNavUser(initialUser);
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { scrollY } = useScroll();
@@ -83,7 +86,17 @@ export function Navbar({
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 24));
 
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    setOpen(false);
+    clearScrollLocks();
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) {
+      document.body.style.removeProperty("overflow");
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
     return () => {
       document.body.style.removeProperty("overflow");
     };

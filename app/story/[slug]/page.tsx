@@ -8,6 +8,7 @@ import { ReaderScrollReset } from "@/components/reader/reader-scroll-reset";
 import { ReviewForm } from "@/components/reader/review-form";
 import { SignInGate } from "@/components/reader/sign-in-gate";
 import { StoryPager } from "@/components/reader/story-pager";
+import { StoryReaderUnlock } from "@/components/reader/story-reader-unlock";
 import { SiteNav } from "@/components/site/site-nav";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -146,6 +147,7 @@ export default async function StoryPage({
 
         <article id="reader-page-top" className="container-page mt-6 scroll-mt-24 sm:mt-12 sm:scroll-mt-28">
           <div className="mx-auto max-w-2xl">
+            <StoryReaderUnlock />
             <ReaderScrollReset page={currentPage} />
 
             <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-white/5 px-4 py-3 text-sm sm:mb-6">

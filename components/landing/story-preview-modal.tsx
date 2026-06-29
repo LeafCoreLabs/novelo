@@ -7,34 +7,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-import { clearScrollLocks } from "@/components/site/route-scroll-reset";
+import { clearScrollLocks, lockBodyScroll, unlockBodyScroll } from "@/components/site/route-scroll-reset";
 import { Button } from "@/components/ui/button";
 import { formatCompact } from "@/lib/utils";
 import type { Story } from "@/types/content";
-
-function lockBodyScroll() {
-  const scrollY = window.scrollY;
-  document.body.dataset.scrollLockY = String(scrollY);
-  document.body.style.position = "fixed";
-  document.body.style.top = `-${scrollY}px`;
-  document.body.style.left = "0";
-  document.body.style.right = "0";
-  document.body.style.width = "100%";
-  document.body.style.overflow = "hidden";
-}
-
-function unlockBodyScroll() {
-  const scrollY = Number.parseInt(document.body.dataset.scrollLockY ?? "0", 10);
-  document.body.style.position = "";
-  document.body.style.top = "";
-  document.body.style.left = "";
-  document.body.style.right = "";
-  document.body.style.width = "";
-  document.body.style.overflow = "";
-  delete document.body.dataset.scrollLockY;
-  window.scrollTo(0, scrollY);
-  clearScrollLocks();
-}
 
 export function StoryPreviewModal({
   story,
@@ -49,6 +25,7 @@ export function StoryPreviewModal({
   useEffect(() => {
     if (prevPathname.current === pathname) return;
     prevPathname.current = pathname;
+    unlockBodyScroll(false);
     onClose();
   }, [pathname, onClose]);
 
@@ -63,7 +40,7 @@ export function StoryPreviewModal({
 
     return () => {
       document.removeEventListener("keydown", onKey);
-      unlockBodyScroll();
+      unlockBodyScroll(true);
     };
   }, [story, onClose]);
 
@@ -128,7 +105,15 @@ export function StoryPreviewModal({
               </div>
               <div className="mt-auto flex flex-wrap gap-2 pt-6">
                 {story.slug && (
-                  <Link href={`/story/${story.slug}`} prefetch className="flex-1" onClick={onClose}>
+                  <Link
+                    href={`/story/${story.slug}`}
+                    prefetch
+                    className="flex-1"
+                    onClick={() => {
+                      unlockBodyScroll(false);
+                      onClose();
+                    }}
+                  >
                     <Button size="lg" className="group w-full">
                       Read preview
                       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
